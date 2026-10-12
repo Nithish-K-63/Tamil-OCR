@@ -327,3 +327,6 @@ The core recognition model is based on the **T3.7 Indic Recognition Architecture
 
 Designed for government archives preservation, cultural heritage digitization, and document intelligence research.  
 Developed under the **Tamil Nadu Government Archives Digitization Initiative**.
+#   T a m i l - O C R  
+ #   T a m i l - O C R  
+ 
