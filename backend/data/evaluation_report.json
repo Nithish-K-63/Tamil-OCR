@@ -1,0 +1,133 @@
+{
+  "timestamp": "2026-10-10T18:39:14Z",
+  "model": {
+    "name": "TamilCNN (T3.7 Indic Recognition Architecture)",
+    "repo": "dhruv10050/t3-7-indic-recognition",
+    "checkpoint": "tamil_best.pth",
+    "classes": 156,
+    "top1_validation_acc": 97.2991,
+    "status": "loaded",
+    "device": "cpu",
+    "parameters": 2566012,
+    "val_acc": 97.2991452991453,
+    "epoch": 25
+  },
+  "dataset": {
+    "name": "Held-Out Tamil Handwritten Test Dataset (156 Classes)",
+    "test_samples_count": 468,
+    "classes_evaluated": 156
+  },
+  "metrics": {
+    "top1_accuracy_percent": 0.85,
+    "top5_accuracy_percent": 3.42,
+    "character_error_rate_cer_percent": 98.33,
+    "word_error_rate_wer_percent": 99.15,
+    "exact_match_accuracy_percent": 0.85,
+    "target_threshold_percent": 90.0,
+    "target_achieved": false,
+    "average_inference_latency_ms": 2.61,
+    "total_eval_time_seconds": 41.03
+  },
+  "sample_predictions": [
+    {
+      "ground_truth": "அ",
+      "prediction": "க்",
+      "match": false
+    },
+    {
+      "ground_truth": "அ",
+      "prediction": "க்",
+      "match": false
+    },
+    {
+      "ground_truth": "அ",
+      "prediction": "ப",
+      "match": false
+    },
+    {
+      "ground_truth": "ஆ",
+      "prediction": "ப",
+      "match": false
+    },
+    {
+      "ground_truth": "ஆ",
+      "prediction": "க்",
+      "match": false
+    },
+    {
+      "ground_truth": "ஆ",
+      "prediction": "ப",
+      "match": false
+    },
+    {
+      "ground_truth": "இ",
+      "prediction": "ப",
+      "match": false
+    },
+    {
+      "ground_truth": "இ",
+      "prediction": "க்",
+      "match": false
+    },
+    {
+      "ground_truth": "இ",
+      "prediction": "ப",
+      "match": false
+    },
+    {
+      "ground_truth": "ஈ",
+      "prediction": "ப",
+      "match": false
+    },
+    {
+      "ground_truth": "ஈ",
+      "prediction": "ப",
+      "match": false
+    },
+    {
+      "ground_truth": "ஈ",
+      "prediction": "ப",
+      "match": false
+    },
+    {
+      "ground_truth": "உ",
+      "prediction": "ப",
+      "match": false
+    },
+    {
+      "ground_truth": "உ",
+      "prediction": "க்",
+      "match": false
+    },
+    {
+      "ground_truth": "உ",
+      "prediction": "க்",
+      "match": false
+    },
+    {
+      "ground_truth": "ஊ",
+      "prediction": "ப",
+      "match": false
+    },
+    {
+      "ground_truth": "ஊ",
+      "prediction": "ப",
+      "match": false
+    },
+    {
+      "ground_truth": "ஊ",
+      "prediction": "ப",
+      "match": false
+    },
+    {
+      "ground_truth": "எ",
+      "prediction": "ப",
+      "match": false
+    },
+    {
+      "ground_truth": "எ",
+      "prediction": "க்",
+      "match": false
+    }
+  ]
+}

@@ -1,0 +1,184 @@
+/* ============================================================
+   TamilOCR GOV v2.4 — Global Stylesheet
+   Tamil Nadu Government Archive OCR System
+   ============================================================ */
+
+/* 1. Google Fonts — MUST come first before all other @imports */
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+Tamil:wght@300;400;500;600;700;800&display=swap');
+
+/* 2. Tailwind CSS v4 import — processes all utility classes */
+@import 'tailwindcss';
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ============================================================
+   3. Tailwind v4 Theme — Custom design tokens
+   ============================================================ */
+@theme {
+  /* Color palette matching reference website */
+  --color-primary:       #00737D;
+  --color-primary-dark:  #005F67;
+  --color-accent:        #F26522;
+  --color-accent-amber:  #C07D2A;
+  --color-bg-dark:       #120E17;
+  --color-sidebar-dark:  #160C1D;
+  --color-surface-dark:  #1D1726;
+  --color-border-dark:   #2C2237;
+  --color-bg-light:      #F5F2EB;
+  --color-surface-light: #EBE5D8;
+  --color-border-light:  #DFD7C7;
+
+  /* Custom font families */
+  --font-family-english: 'Inter', 'system-ui', 'sans-serif';
+  --font-family-tamil:   'Noto Sans Tamil', 'Inter', 'sans-serif';
+  --font-family-serif:   'Cormorant Garamond', 'Georgia', 'serif';
+}
+
+/* ============================================================
+   4. Custom utility classes used throughout the app
+   ============================================================ */
+
+/* font-english — applied to headings, labels, and general UI */
+.font-english {
+  font-family: 'Inter', 'system-ui', sans-serif;
+}
+
+/* font-serif — applied to manuscript headers and elegant titles */
+.font-serif {
+  font-family: 'Cormorant Garamond', 'Georgia', serif;
+}
+
+/* font-tamil — applied to Tamil script content */
+.font-tamil {
+  font-family: 'Noto Sans Tamil', 'Inter', sans-serif;
+  line-height: 1.7;
+}
+
+/* ============================================================
+   5. Base / Reset styles
+   ============================================================ */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', 'system-ui', sans-serif;
+  background-color: #F5F2EB;
+  color: #1A1523;
+  min-height: 100vh;
+}
+
+html.dark body {
+  background-color: #120E17;
+  color: #F5F2EB;
+}
+
+/* Remove default link styling that causes blue/purple links */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Remove default button styling */
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* ============================================================
+   6. Custom scrollbar — used in sidebar, text areas
+   ============================================================ */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Light mode scrollbar */
+.light .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+/* Global scrollbar for the page */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ============================================================
+   7. Tailwind `animate-in` utility — used in Navbar dropdowns
+   ============================================================ */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slide-in-from-top-2 {
+  from { transform: translateY(-0.5rem); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+.animate-in {
+  animation-duration: 200ms;
+  animation-fill-mode: both;
+  animation-timing-function: ease-out;
+}
+
+.fade-in {
+  animation-name: fade-in;
+}
+
+.slide-in-from-top-2 {
+  animation-name: slide-in-from-top-2;
+}
+
+/* ============================================================
+   8. Tailwind `duration-200` for animate-in
+   ============================================================ */
+.duration-200 {
+  animation-duration: 200ms;
+}
+
+/* ============================================================
+   9. Dark mode — html.dark class toggled by ThemeContext
+   ============================================================ */
+html.dark {
+  color-scheme: dark;
+}
+
+/* ============================================================
+   10. Root element fills viewport
+   ============================================================ */
+#root {
+  min-height: 100vh;
+}

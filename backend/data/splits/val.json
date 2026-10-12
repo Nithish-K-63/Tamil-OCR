@@ -1,0 +1,1874 @@
+[
+  {
+    "image_path": "samples\\val\\class_000\\sample_010.png",
+    "label": "அ",
+    "class_index": 0,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_000\\sample_011.png",
+    "label": "அ",
+    "class_index": 0,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_001\\sample_010.png",
+    "label": "ஆ",
+    "class_index": 1,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_001\\sample_011.png",
+    "label": "ஆ",
+    "class_index": 1,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_002\\sample_010.png",
+    "label": "இ",
+    "class_index": 2,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_002\\sample_011.png",
+    "label": "இ",
+    "class_index": 2,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_003\\sample_010.png",
+    "label": "ஈ",
+    "class_index": 3,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_003\\sample_011.png",
+    "label": "ஈ",
+    "class_index": 3,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_004\\sample_010.png",
+    "label": "உ",
+    "class_index": 4,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_004\\sample_011.png",
+    "label": "உ",
+    "class_index": 4,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_005\\sample_010.png",
+    "label": "ஊ",
+    "class_index": 5,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_005\\sample_011.png",
+    "label": "ஊ",
+    "class_index": 5,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_006\\sample_010.png",
+    "label": "எ",
+    "class_index": 6,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_006\\sample_011.png",
+    "label": "எ",
+    "class_index": 6,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_007\\sample_010.png",
+    "label": "ஏ",
+    "class_index": 7,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_007\\sample_011.png",
+    "label": "ஏ",
+    "class_index": 7,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_008\\sample_010.png",
+    "label": "ஐ",
+    "class_index": 8,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_008\\sample_011.png",
+    "label": "ஐ",
+    "class_index": 8,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_009\\sample_010.png",
+    "label": "ஒ",
+    "class_index": 9,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_009\\sample_011.png",
+    "label": "ஒ",
+    "class_index": 9,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_010\\sample_010.png",
+    "label": "ஓ",
+    "class_index": 10,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_010\\sample_011.png",
+    "label": "ஓ",
+    "class_index": 10,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_011\\sample_010.png",
+    "label": "ஔ",
+    "class_index": 11,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_011\\sample_011.png",
+    "label": "ஔ",
+    "class_index": 11,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_012\\sample_010.png",
+    "label": "ஃ",
+    "class_index": 12,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_012\\sample_011.png",
+    "label": "ஃ",
+    "class_index": 12,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_013\\sample_010.png",
+    "label": "க்",
+    "class_index": 13,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_013\\sample_011.png",
+    "label": "க்",
+    "class_index": 13,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_014\\sample_010.png",
+    "label": "ங்",
+    "class_index": 14,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_014\\sample_011.png",
+    "label": "ங்",
+    "class_index": 14,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_015\\sample_010.png",
+    "label": "ச்",
+    "class_index": 15,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_015\\sample_011.png",
+    "label": "ச்",
+    "class_index": 15,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_016\\sample_010.png",
+    "label": "ஞ்",
+    "class_index": 16,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_016\\sample_011.png",
+    "label": "ஞ்",
+    "class_index": 16,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_017\\sample_010.png",
+    "label": "ட்",
+    "class_index": 17,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_017\\sample_011.png",
+    "label": "ட்",
+    "class_index": 17,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_018\\sample_010.png",
+    "label": "ண்",
+    "class_index": 18,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_018\\sample_011.png",
+    "label": "ண்",
+    "class_index": 18,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_019\\sample_010.png",
+    "label": "த்",
+    "class_index": 19,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_019\\sample_011.png",
+    "label": "த்",
+    "class_index": 19,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_020\\sample_010.png",
+    "label": "ந்",
+    "class_index": 20,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_020\\sample_011.png",
+    "label": "ந்",
+    "class_index": 20,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_021\\sample_010.png",
+    "label": "ப்",
+    "class_index": 21,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_021\\sample_011.png",
+    "label": "ப்",
+    "class_index": 21,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_022\\sample_010.png",
+    "label": "ம்",
+    "class_index": 22,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_022\\sample_011.png",
+    "label": "ம்",
+    "class_index": 22,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_023\\sample_010.png",
+    "label": "ய்",
+    "class_index": 23,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_023\\sample_011.png",
+    "label": "ய்",
+    "class_index": 23,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_024\\sample_010.png",
+    "label": "ர்",
+    "class_index": 24,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_024\\sample_011.png",
+    "label": "ர்",
+    "class_index": 24,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_025\\sample_010.png",
+    "label": "ல்",
+    "class_index": 25,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_025\\sample_011.png",
+    "label": "ல்",
+    "class_index": 25,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_026\\sample_010.png",
+    "label": "வ்",
+    "class_index": 26,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_026\\sample_011.png",
+    "label": "வ்",
+    "class_index": 26,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_027\\sample_010.png",
+    "label": "ழ்",
+    "class_index": 27,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_027\\sample_011.png",
+    "label": "ழ்",
+    "class_index": 27,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_028\\sample_010.png",
+    "label": "ள்",
+    "class_index": 28,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_028\\sample_011.png",
+    "label": "ள்",
+    "class_index": 28,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_029\\sample_010.png",
+    "label": "ற்",
+    "class_index": 29,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_029\\sample_011.png",
+    "label": "ற்",
+    "class_index": 29,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_030\\sample_010.png",
+    "label": "ன்",
+    "class_index": 30,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_030\\sample_011.png",
+    "label": "ன்",
+    "class_index": 30,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_031\\sample_010.png",
+    "label": "க",
+    "class_index": 31,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_031\\sample_011.png",
+    "label": "க",
+    "class_index": 31,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_032\\sample_010.png",
+    "label": "ங",
+    "class_index": 32,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_032\\sample_011.png",
+    "label": "ங",
+    "class_index": 32,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_033\\sample_010.png",
+    "label": "ச",
+    "class_index": 33,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_033\\sample_011.png",
+    "label": "ச",
+    "class_index": 33,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_034\\sample_010.png",
+    "label": "ஞ",
+    "class_index": 34,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_034\\sample_011.png",
+    "label": "ஞ",
+    "class_index": 34,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_035\\sample_010.png",
+    "label": "ட",
+    "class_index": 35,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_035\\sample_011.png",
+    "label": "ட",
+    "class_index": 35,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_036\\sample_010.png",
+    "label": "ண",
+    "class_index": 36,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_036\\sample_011.png",
+    "label": "ண",
+    "class_index": 36,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_037\\sample_010.png",
+    "label": "த",
+    "class_index": 37,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_037\\sample_011.png",
+    "label": "த",
+    "class_index": 37,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_038\\sample_010.png",
+    "label": "ந",
+    "class_index": 38,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_038\\sample_011.png",
+    "label": "ந",
+    "class_index": 38,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_039\\sample_010.png",
+    "label": "ப",
+    "class_index": 39,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_039\\sample_011.png",
+    "label": "ப",
+    "class_index": 39,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_040\\sample_010.png",
+    "label": "ம",
+    "class_index": 40,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_040\\sample_011.png",
+    "label": "ம",
+    "class_index": 40,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_041\\sample_010.png",
+    "label": "ய",
+    "class_index": 41,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_041\\sample_011.png",
+    "label": "ய",
+    "class_index": 41,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_042\\sample_010.png",
+    "label": "ர",
+    "class_index": 42,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_042\\sample_011.png",
+    "label": "ர",
+    "class_index": 42,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_043\\sample_010.png",
+    "label": "ல",
+    "class_index": 43,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_043\\sample_011.png",
+    "label": "ல",
+    "class_index": 43,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_044\\sample_010.png",
+    "label": "வ",
+    "class_index": 44,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_044\\sample_011.png",
+    "label": "வ",
+    "class_index": 44,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_045\\sample_010.png",
+    "label": "ழ",
+    "class_index": 45,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_045\\sample_011.png",
+    "label": "ழ",
+    "class_index": 45,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_046\\sample_010.png",
+    "label": "ள",
+    "class_index": 46,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_046\\sample_011.png",
+    "label": "ள",
+    "class_index": 46,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_047\\sample_010.png",
+    "label": "ற",
+    "class_index": 47,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_047\\sample_011.png",
+    "label": "ற",
+    "class_index": 47,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_048\\sample_010.png",
+    "label": "ன",
+    "class_index": 48,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_048\\sample_011.png",
+    "label": "ன",
+    "class_index": 48,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_049\\sample_010.png",
+    "label": "கா",
+    "class_index": 49,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_049\\sample_011.png",
+    "label": "கா",
+    "class_index": 49,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_050\\sample_010.png",
+    "label": "ஙா",
+    "class_index": 50,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_050\\sample_011.png",
+    "label": "ஙா",
+    "class_index": 50,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_051\\sample_010.png",
+    "label": "சா",
+    "class_index": 51,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_051\\sample_011.png",
+    "label": "சா",
+    "class_index": 51,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_052\\sample_010.png",
+    "label": "ஞா",
+    "class_index": 52,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_052\\sample_011.png",
+    "label": "ஞா",
+    "class_index": 52,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_053\\sample_010.png",
+    "label": "டா",
+    "class_index": 53,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_053\\sample_011.png",
+    "label": "டா",
+    "class_index": 53,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_054\\sample_010.png",
+    "label": "ணா",
+    "class_index": 54,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_054\\sample_011.png",
+    "label": "ணா",
+    "class_index": 54,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_055\\sample_010.png",
+    "label": "தா",
+    "class_index": 55,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_055\\sample_011.png",
+    "label": "தா",
+    "class_index": 55,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_056\\sample_010.png",
+    "label": "நா",
+    "class_index": 56,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_056\\sample_011.png",
+    "label": "நா",
+    "class_index": 56,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_057\\sample_010.png",
+    "label": "பா",
+    "class_index": 57,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_057\\sample_011.png",
+    "label": "பா",
+    "class_index": 57,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_058\\sample_010.png",
+    "label": "மா",
+    "class_index": 58,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_058\\sample_011.png",
+    "label": "மா",
+    "class_index": 58,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_059\\sample_010.png",
+    "label": "யா",
+    "class_index": 59,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_059\\sample_011.png",
+    "label": "யா",
+    "class_index": 59,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_060\\sample_010.png",
+    "label": "ரா",
+    "class_index": 60,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_060\\sample_011.png",
+    "label": "ரா",
+    "class_index": 60,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_061\\sample_010.png",
+    "label": "லா",
+    "class_index": 61,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_061\\sample_011.png",
+    "label": "லா",
+    "class_index": 61,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_062\\sample_010.png",
+    "label": "வா",
+    "class_index": 62,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_062\\sample_011.png",
+    "label": "வா",
+    "class_index": 62,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_063\\sample_010.png",
+    "label": "ழா",
+    "class_index": 63,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_063\\sample_011.png",
+    "label": "ழா",
+    "class_index": 63,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_064\\sample_010.png",
+    "label": "ளா",
+    "class_index": 64,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_064\\sample_011.png",
+    "label": "ளா",
+    "class_index": 64,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_065\\sample_010.png",
+    "label": "றா",
+    "class_index": 65,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_065\\sample_011.png",
+    "label": "றா",
+    "class_index": 65,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_066\\sample_010.png",
+    "label": "னா",
+    "class_index": 66,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_066\\sample_011.png",
+    "label": "னா",
+    "class_index": 66,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_067\\sample_010.png",
+    "label": "கி",
+    "class_index": 67,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_067\\sample_011.png",
+    "label": "கி",
+    "class_index": 67,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_068\\sample_010.png",
+    "label": "ஙி",
+    "class_index": 68,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_068\\sample_011.png",
+    "label": "ஙி",
+    "class_index": 68,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_069\\sample_010.png",
+    "label": "சி",
+    "class_index": 69,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_069\\sample_011.png",
+    "label": "சி",
+    "class_index": 69,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_070\\sample_010.png",
+    "label": "ஞி",
+    "class_index": 70,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_070\\sample_011.png",
+    "label": "ஞி",
+    "class_index": 70,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_071\\sample_010.png",
+    "label": "டி",
+    "class_index": 71,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_071\\sample_011.png",
+    "label": "டி",
+    "class_index": 71,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_072\\sample_010.png",
+    "label": "ணி",
+    "class_index": 72,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_072\\sample_011.png",
+    "label": "ணி",
+    "class_index": 72,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_073\\sample_010.png",
+    "label": "தி",
+    "class_index": 73,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_073\\sample_011.png",
+    "label": "தி",
+    "class_index": 73,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_074\\sample_010.png",
+    "label": "நி",
+    "class_index": 74,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_074\\sample_011.png",
+    "label": "நி",
+    "class_index": 74,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_075\\sample_010.png",
+    "label": "பி",
+    "class_index": 75,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_075\\sample_011.png",
+    "label": "பி",
+    "class_index": 75,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_076\\sample_010.png",
+    "label": "மி",
+    "class_index": 76,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_076\\sample_011.png",
+    "label": "மி",
+    "class_index": 76,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_077\\sample_010.png",
+    "label": "யி",
+    "class_index": 77,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_077\\sample_011.png",
+    "label": "யி",
+    "class_index": 77,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_078\\sample_010.png",
+    "label": "ரி",
+    "class_index": 78,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_078\\sample_011.png",
+    "label": "ரி",
+    "class_index": 78,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_079\\sample_010.png",
+    "label": "லி",
+    "class_index": 79,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_079\\sample_011.png",
+    "label": "லி",
+    "class_index": 79,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_080\\sample_010.png",
+    "label": "வி",
+    "class_index": 80,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_080\\sample_011.png",
+    "label": "வி",
+    "class_index": 80,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_081\\sample_010.png",
+    "label": "ழி",
+    "class_index": 81,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_081\\sample_011.png",
+    "label": "ழி",
+    "class_index": 81,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_082\\sample_010.png",
+    "label": "ளி",
+    "class_index": 82,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_082\\sample_011.png",
+    "label": "ளி",
+    "class_index": 82,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_083\\sample_010.png",
+    "label": "றி",
+    "class_index": 83,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_083\\sample_011.png",
+    "label": "றி",
+    "class_index": 83,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_084\\sample_010.png",
+    "label": "னி",
+    "class_index": 84,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_084\\sample_011.png",
+    "label": "னி",
+    "class_index": 84,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_085\\sample_010.png",
+    "label": "கீ",
+    "class_index": 85,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_085\\sample_011.png",
+    "label": "கீ",
+    "class_index": 85,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_086\\sample_010.png",
+    "label": "ஙீ",
+    "class_index": 86,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_086\\sample_011.png",
+    "label": "ஙீ",
+    "class_index": 86,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_087\\sample_010.png",
+    "label": "சீ",
+    "class_index": 87,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_087\\sample_011.png",
+    "label": "சீ",
+    "class_index": 87,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_088\\sample_010.png",
+    "label": "ஞீ",
+    "class_index": 88,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_088\\sample_011.png",
+    "label": "ஞீ",
+    "class_index": 88,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_089\\sample_010.png",
+    "label": "டீ",
+    "class_index": 89,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_089\\sample_011.png",
+    "label": "டீ",
+    "class_index": 89,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_090\\sample_010.png",
+    "label": "ணீ",
+    "class_index": 90,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_090\\sample_011.png",
+    "label": "ணீ",
+    "class_index": 90,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_091\\sample_010.png",
+    "label": "தீ",
+    "class_index": 91,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_091\\sample_011.png",
+    "label": "தீ",
+    "class_index": 91,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_092\\sample_010.png",
+    "label": "நீ",
+    "class_index": 92,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_092\\sample_011.png",
+    "label": "நீ",
+    "class_index": 92,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_093\\sample_010.png",
+    "label": "பீ",
+    "class_index": 93,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_093\\sample_011.png",
+    "label": "பீ",
+    "class_index": 93,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_094\\sample_010.png",
+    "label": "மீ",
+    "class_index": 94,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_094\\sample_011.png",
+    "label": "மீ",
+    "class_index": 94,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_095\\sample_010.png",
+    "label": "யீ",
+    "class_index": 95,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_095\\sample_011.png",
+    "label": "யீ",
+    "class_index": 95,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_096\\sample_010.png",
+    "label": "ரீ",
+    "class_index": 96,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_096\\sample_011.png",
+    "label": "ரீ",
+    "class_index": 96,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_097\\sample_010.png",
+    "label": "லீ",
+    "class_index": 97,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_097\\sample_011.png",
+    "label": "லீ",
+    "class_index": 97,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_098\\sample_010.png",
+    "label": "வீ",
+    "class_index": 98,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_098\\sample_011.png",
+    "label": "வீ",
+    "class_index": 98,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_099\\sample_010.png",
+    "label": "ழீ",
+    "class_index": 99,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_099\\sample_011.png",
+    "label": "ழீ",
+    "class_index": 99,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_100\\sample_010.png",
+    "label": "ளீ",
+    "class_index": 100,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_100\\sample_011.png",
+    "label": "ளீ",
+    "class_index": 100,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_101\\sample_010.png",
+    "label": "றீ",
+    "class_index": 101,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_101\\sample_011.png",
+    "label": "றீ",
+    "class_index": 101,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_102\\sample_010.png",
+    "label": "னீ",
+    "class_index": 102,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_102\\sample_011.png",
+    "label": "னீ",
+    "class_index": 102,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_103\\sample_010.png",
+    "label": "கு",
+    "class_index": 103,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_103\\sample_011.png",
+    "label": "கு",
+    "class_index": 103,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_104\\sample_010.png",
+    "label": "ஙு",
+    "class_index": 104,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_104\\sample_011.png",
+    "label": "ஙு",
+    "class_index": 104,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_105\\sample_010.png",
+    "label": "சு",
+    "class_index": 105,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_105\\sample_011.png",
+    "label": "சு",
+    "class_index": 105,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_106\\sample_010.png",
+    "label": "ஞு",
+    "class_index": 106,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_106\\sample_011.png",
+    "label": "ஞு",
+    "class_index": 106,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_107\\sample_010.png",
+    "label": "டு",
+    "class_index": 107,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_107\\sample_011.png",
+    "label": "டு",
+    "class_index": 107,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_108\\sample_010.png",
+    "label": "ணு",
+    "class_index": 108,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_108\\sample_011.png",
+    "label": "ணு",
+    "class_index": 108,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_109\\sample_010.png",
+    "label": "து",
+    "class_index": 109,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_109\\sample_011.png",
+    "label": "து",
+    "class_index": 109,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_110\\sample_010.png",
+    "label": "நு",
+    "class_index": 110,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_110\\sample_011.png",
+    "label": "நு",
+    "class_index": 110,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_111\\sample_010.png",
+    "label": "பு",
+    "class_index": 111,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_111\\sample_011.png",
+    "label": "பு",
+    "class_index": 111,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_112\\sample_010.png",
+    "label": "மு",
+    "class_index": 112,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_112\\sample_011.png",
+    "label": "மு",
+    "class_index": 112,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_113\\sample_010.png",
+    "label": "யு",
+    "class_index": 113,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_113\\sample_011.png",
+    "label": "யு",
+    "class_index": 113,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_114\\sample_010.png",
+    "label": "ரு",
+    "class_index": 114,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_114\\sample_011.png",
+    "label": "ரு",
+    "class_index": 114,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_115\\sample_010.png",
+    "label": "லு",
+    "class_index": 115,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_115\\sample_011.png",
+    "label": "லு",
+    "class_index": 115,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_116\\sample_010.png",
+    "label": "வு",
+    "class_index": 116,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_116\\sample_011.png",
+    "label": "வு",
+    "class_index": 116,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_117\\sample_010.png",
+    "label": "ழு",
+    "class_index": 117,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_117\\sample_011.png",
+    "label": "ழு",
+    "class_index": 117,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_118\\sample_010.png",
+    "label": "ளு",
+    "class_index": 118,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_118\\sample_011.png",
+    "label": "ளு",
+    "class_index": 118,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_119\\sample_010.png",
+    "label": "று",
+    "class_index": 119,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_119\\sample_011.png",
+    "label": "று",
+    "class_index": 119,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_120\\sample_010.png",
+    "label": "னு",
+    "class_index": 120,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_120\\sample_011.png",
+    "label": "னு",
+    "class_index": 120,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_121\\sample_010.png",
+    "label": "கூ",
+    "class_index": 121,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_121\\sample_011.png",
+    "label": "கூ",
+    "class_index": 121,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_122\\sample_010.png",
+    "label": "ஙூ",
+    "class_index": 122,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_122\\sample_011.png",
+    "label": "ஙூ",
+    "class_index": 122,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_123\\sample_010.png",
+    "label": "சூ",
+    "class_index": 123,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_123\\sample_011.png",
+    "label": "சூ",
+    "class_index": 123,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_124\\sample_010.png",
+    "label": "ஞூ",
+    "class_index": 124,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_124\\sample_011.png",
+    "label": "ஞூ",
+    "class_index": 124,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_125\\sample_010.png",
+    "label": "டூ",
+    "class_index": 125,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_125\\sample_011.png",
+    "label": "டூ",
+    "class_index": 125,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_126\\sample_010.png",
+    "label": "ணூ",
+    "class_index": 126,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_126\\sample_011.png",
+    "label": "ணூ",
+    "class_index": 126,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_127\\sample_010.png",
+    "label": "தூ",
+    "class_index": 127,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_127\\sample_011.png",
+    "label": "தூ",
+    "class_index": 127,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_128\\sample_010.png",
+    "label": "நூ",
+    "class_index": 128,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_128\\sample_011.png",
+    "label": "நூ",
+    "class_index": 128,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_129\\sample_010.png",
+    "label": "பூ",
+    "class_index": 129,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_129\\sample_011.png",
+    "label": "பூ",
+    "class_index": 129,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_130\\sample_010.png",
+    "label": "மூ",
+    "class_index": 130,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_130\\sample_011.png",
+    "label": "மூ",
+    "class_index": 130,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_131\\sample_010.png",
+    "label": "யூ",
+    "class_index": 131,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_131\\sample_011.png",
+    "label": "யூ",
+    "class_index": 131,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_132\\sample_010.png",
+    "label": "ரூ",
+    "class_index": 132,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_132\\sample_011.png",
+    "label": "ரூ",
+    "class_index": 132,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_133\\sample_010.png",
+    "label": "லூ",
+    "class_index": 133,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_133\\sample_011.png",
+    "label": "லூ",
+    "class_index": 133,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_134\\sample_010.png",
+    "label": "வூ",
+    "class_index": 134,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_134\\sample_011.png",
+    "label": "வூ",
+    "class_index": 134,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_135\\sample_010.png",
+    "label": "ழூ",
+    "class_index": 135,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_135\\sample_011.png",
+    "label": "ழூ",
+    "class_index": 135,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_136\\sample_010.png",
+    "label": "ளூ",
+    "class_index": 136,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_136\\sample_011.png",
+    "label": "ளூ",
+    "class_index": 136,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_137\\sample_010.png",
+    "label": "றூ",
+    "class_index": 137,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_137\\sample_011.png",
+    "label": "றூ",
+    "class_index": 137,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_138\\sample_010.png",
+    "label": "னூ",
+    "class_index": 138,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_138\\sample_011.png",
+    "label": "னூ",
+    "class_index": 138,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_139\\sample_010.png",
+    "label": "ஜ",
+    "class_index": 139,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_139\\sample_011.png",
+    "label": "ஜ",
+    "class_index": 139,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_140\\sample_010.png",
+    "label": "ஜா",
+    "class_index": 140,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_140\\sample_011.png",
+    "label": "ஜா",
+    "class_index": 140,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_141\\sample_010.png",
+    "label": "ஜி",
+    "class_index": 141,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_141\\sample_011.png",
+    "label": "ஜி",
+    "class_index": 141,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_142\\sample_010.png",
+    "label": "ஜீ",
+    "class_index": 142,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_142\\sample_011.png",
+    "label": "ஜீ",
+    "class_index": 142,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_143\\sample_010.png",
+    "label": "ஜு",
+    "class_index": 143,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_143\\sample_011.png",
+    "label": "ஜு",
+    "class_index": 143,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_144\\sample_010.png",
+    "label": "ஜூ",
+    "class_index": 144,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_144\\sample_011.png",
+    "label": "ஜூ",
+    "class_index": 144,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_145\\sample_010.png",
+    "label": "ஷ",
+    "class_index": 145,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_145\\sample_011.png",
+    "label": "ஷ",
+    "class_index": 145,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_146\\sample_010.png",
+    "label": "ஷா",
+    "class_index": 146,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_146\\sample_011.png",
+    "label": "ஷா",
+    "class_index": 146,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_147\\sample_010.png",
+    "label": "ஷி",
+    "class_index": 147,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_147\\sample_011.png",
+    "label": "ஷி",
+    "class_index": 147,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_148\\sample_010.png",
+    "label": "ஷீ",
+    "class_index": 148,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_148\\sample_011.png",
+    "label": "ஷீ",
+    "class_index": 148,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_149\\sample_010.png",
+    "label": "ஸ",
+    "class_index": 149,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_149\\sample_011.png",
+    "label": "ஸ",
+    "class_index": 149,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_150\\sample_010.png",
+    "label": "ஸா",
+    "class_index": 150,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_150\\sample_011.png",
+    "label": "ஸா",
+    "class_index": 150,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_151\\sample_010.png",
+    "label": "ஸி",
+    "class_index": 151,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_151\\sample_011.png",
+    "label": "ஸி",
+    "class_index": 151,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_152\\sample_010.png",
+    "label": "ஸீ",
+    "class_index": 152,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_152\\sample_011.png",
+    "label": "ஸீ",
+    "class_index": 152,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_153\\sample_010.png",
+    "label": "ஹ",
+    "class_index": 153,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_153\\sample_011.png",
+    "label": "ஹ",
+    "class_index": 153,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_154\\sample_010.png",
+    "label": "ஹா",
+    "class_index": 154,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_154\\sample_011.png",
+    "label": "ஹா",
+    "class_index": 154,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_155\\sample_010.png",
+    "label": "ஸ்ரீ",
+    "class_index": 155,
+    "split": "val"
+  },
+  {
+    "image_path": "samples\\val\\class_155\\sample_011.png",
+    "label": "ஸ்ரீ",
+    "class_index": 155,
+    "split": "val"
+  }
+]

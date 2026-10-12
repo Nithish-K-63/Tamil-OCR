@@ -1,0 +1,11 @@
+{
+  "title": "TamilOCR — Tamil Nadu Government Archives Digitization Portal",
+  "description": "Effortlessly digitize handwritten Tamil government records with advanced OCR technology, enabling easy access, editing, and archiving for users.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

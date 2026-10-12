@@ -1,0 +1,25 @@
+node_modules/
+dist/
+build/
+.cache/
+.env
+.env.*
+.env.local
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv/
+*.db
+*.sqlite3
+
+# Raw Datasets
+Dataset/
+

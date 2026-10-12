@@ -1,0 +1,15 @@
+fastapi>=0.115.0
+uvicorn>=0.30.0
+torch>=2.2.0
+torchvision>=0.17.0
+numpy>=1.26.0
+opencv-python>=4.10.0
+pillow>=10.4.0
+python-multipart>=0.0.9
+huggingface-hub>=0.25.0
+jiwer>=3.0.4
+Open-Tamil>=1.1
+aiosqlite>=0.20.0
+pydantic>=2.8.0
+pymongo>=4.9.0
+dnspython>=2.6.0
