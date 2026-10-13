@@ -19,6 +19,7 @@ const DocumentUpload = () => {
   const [department, setDepartment] = useState('Revenue Department');
   const [docYear, setDocYear] = useState('1978');
   const [district, setDistrict] = useState('Thanjavur');
+  const [selectedModel, setSelectedModel] = useState('tesseract_primary');
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
 
@@ -49,7 +50,8 @@ const DocumentUpload = () => {
       tamilTitle: docTitle,
       department: department,
       year: docYear,
-      district: district
+      district: district,
+      model: selectedModel
     };
     navigate('/pipeline', {
       state: {
@@ -205,11 +207,99 @@ const DocumentUpload = () => {
             </div>
           </div>
 
+          {/* Model Architecture Selection */}
+          <div className="mt-6 pt-5 border-t border-[#DFD7C7]/70 dark:border-[#2C2237]">
+            <label className="block text-xs font-bold text-[#1A1523] dark:text-[#F5F2EB] mb-2.5">
+              {t('label_model_select', 'AI Recognition Engine (Tesseract Primary)')}
+            </label>
+            <div className="grid grid-cols-1 gap-3 mb-3">
+              {/* PRIMARY MODEL CARD */}
+              <button
+                type="button"
+                onClick={() => setSelectedModel('tesseract_primary')}
+                className={`p-4 rounded-xl border text-left transition-all cursor-pointer ${
+                  selectedModel === 'tesseract_primary'
+                    ? 'border-[#00737D] bg-[#00737D]/8 ring-2 ring-[#00737D]'
+                    : 'border-[#DFD7C7] dark:border-[#382C46] bg-white dark:bg-[#251D30] hover:bg-gray-50 dark:hover:bg-[#2D233A]'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-[#1A1523] dark:text-[#F5F2EB]">
+                      Tesseract OCR (Primary Model)
+                    </span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#00737D] text-white">
+                      PRIMARY
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
+                    lang='tam' (Tamil Pack)
+                  </span>
+                </div>
+                <p className="text-[11px] text-[#7A7185] dark:text-[#9D93A7] leading-relaxed">
+                  Direct LSTM Tamil transcription: <code className="font-mono text-[#00737D] dark:text-[#2DD4BF]">pytesseract.image_to_string(img, lang='tam')</code>. High-fidelity document parsing with full paragraph and word bounding boxes.
+                </p>
+              </button>
+            </div>
+
+            {/* SECONDARY MODELS */}
+            <p className="text-[11px] font-semibold text-[#7A7185] dark:text-[#9D93A7] mb-2">
+              Secondary Alternative Models:
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setSelectedModel('t3_7_tamilcnn')}
+                className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                  selectedModel === 't3_7_tamilcnn'
+                    ? 'border-[#00737D] bg-[#00737D]/5 ring-2 ring-[#00737D]/40'
+                    : 'border-[#DFD7C7] dark:border-[#382C46] bg-white dark:bg-[#251D30] hover:bg-gray-50 dark:hover:bg-[#2D233A]'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-bold text-[#1A1523] dark:text-[#F5F2EB]">T3.7 TamilCNN</span>
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300">
+                    Secondary
+                  </span>
+                </div>
+                <p className="text-[11px] text-[#7A7185] dark:text-[#9D93A7] leading-relaxed">
+                  4-Block Deep CNN character classifier tested on uTHCD split (1.6ms latency).
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSelectedModel('bodhan_indic_ocr')}
+                className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                  selectedModel === 'bodhan_indic_ocr'
+                    ? 'border-[#00737D] bg-[#00737D]/5 ring-2 ring-[#00737D]/40'
+                    : 'border-[#DFD7C7] dark:border-[#382C46] bg-white dark:bg-[#251D30] hover:bg-gray-50 dark:hover:bg-[#2D233A]'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-bold text-[#1A1523] dark:text-[#F5F2EB]">Indic-OCR</span>
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300">
+                    Secondary
+                  </span>
+                </div>
+                <p className="text-[11px] text-[#7A7185] dark:text-[#9D93A7] leading-relaxed">
+                  Bodhan AI Two-Stage Architecture (IndicDocLayout + IndicBlockOCR).
+                </p>
+              </button>
+            </div>
+          </div>
+
           {/* Bottom Action Bar */}
-          <div className="mt-8 pt-5 border-t border-[#DFD7C7] dark:border-[#2C2237] flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="mt-6 pt-5 border-t border-[#DFD7C7] dark:border-[#2C2237] flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-xs text-[#7A7185] dark:text-[#9D93A7]">
               <Info className="w-4 h-4 text-[#00737D]" />
-              <span>{t('connected_backend_info', 'TamilCNN Deep Vision Model · Connected to Python Backend')}</span>
+              <span>
+                {selectedModel === 'tesseract_primary'
+                  ? 'Tesseract OCR (Primary Model - lang=\'tam\') · Active'
+                  : selectedModel === 'bodhan_indic_ocr'
+                  ? 'Indic-OCR (Bodhan AI Architecture - Secondary) · Active'
+                  : 'TamilCNN T3.7 (Secondary Model) · Active'}
+              </span>
             </div>
 
             <button

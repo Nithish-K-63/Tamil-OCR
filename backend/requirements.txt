@@ -13,3 +13,4 @@ aiosqlite>=0.20.0
 pydantic>=2.8.0
 pymongo>=4.9.0
 dnspython>=2.6.0
+pytesseract>=0.3.10

@@ -1,63 +1,109 @@
 // Configuration & Environment-driven API Endpoint
-const API_BASE_URL = import.meta.env.VITE_API_URL || localStorage.getItem("tamilocr_api_url") || "http://localhost:8000";
+const getStoredConfig = (key, fallback = "") => {
+  try {
+    return localStorage.getItem(key) || fallback;
+  } catch {
+    return fallback;
+  }
+};
 
 export const getApiConfig = () => {
   return {
-    baseUrl: import.meta.env.VITE_API_URL || localStorage.getItem("tamilocr_api_url") || "http://localhost:8000",
-    apiKey: localStorage.getItem("tamilocr_api_key") || "",
-    demoMode: localStorage.getItem("tamilocr_demo_mode") === "true", // Default to false (Real Backend Mode)
-    modelName: localStorage.getItem("tamilocr_model") || "TamilCNN-T3.7-Indic",
-    confidenceThreshold: parseFloat(localStorage.getItem("tamilocr_confidence") || "80")
+    // Default to relative URL "" so requests go to "/api/..." through Vite dev proxy
+    // If VITE_API_URL or localStorage explicitly provides a URL, use it
+    baseUrl: import.meta.env.VITE_API_URL || getStoredConfig("tamilocr_api_url", ""),
+    apiKey: getStoredConfig("tamilocr_api_key", ""),
+    demoMode: getStoredConfig("tamilocr_demo_mode", "false") === "true",
+    modelName: getStoredConfig("tamilocr_model", "tesseract_primary"),
+    confidenceThreshold: parseFloat(getStoredConfig("tamilocr_confidence", "80")) || 80
   };
 };
 
 export const saveApiConfig = (config) => {
-  if (config.baseUrl) localStorage.setItem("tamilocr_api_url", config.baseUrl);
-  if (config.apiKey !== undefined) localStorage.setItem("tamilocr_api_key", config.apiKey);
-  if (config.demoMode !== undefined) localStorage.setItem("tamilocr_demo_mode", config.demoMode ? "true" : "false");
-  if (config.modelName) localStorage.setItem("tamilocr_model", config.modelName);
-  if (config.confidenceThreshold) localStorage.setItem("tamilocr_confidence", config.confidenceThreshold.toString());
+  try {
+    if (config.baseUrl !== undefined) localStorage.setItem("tamilocr_api_url", config.baseUrl);
+    if (config.apiKey !== undefined) localStorage.setItem("tamilocr_api_key", config.apiKey);
+    if (config.demoMode !== undefined) localStorage.setItem("tamilocr_demo_mode", config.demoMode ? "true" : "false");
+    if (config.modelName) localStorage.setItem("tamilocr_model", config.modelName);
+    if (config.confidenceThreshold) localStorage.setItem("tamilocr_confidence", config.confidenceThreshold.toString());
+  } catch (e) {
+    console.warn("Could not save API config to localStorage:", e);
+  }
+};
+
+/**
+ * Builds safe URL for an API endpoint path.
+ * Supports both relative paths ("/api/...") and absolute baseURLs ("http://localhost:8000/api/...").
+ */
+const resolveUrl = (endpoint, baseUrl) => {
+  const cleanEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+  if (!baseUrl || baseUrl.trim() === "") {
+    return cleanEndpoint;
+  }
+  const cleanBase = baseUrl.replace(/\/+$/, "");
+  return `${cleanBase}${cleanEndpoint}`;
+};
+
+/**
+ * Safe fetch with AbortController timeout and fallback to relative proxy path.
+ */
+const fetchWithTimeout = async (endpoint, options = {}, timeoutMs = 5000) => {
+  const config = getApiConfig();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  const headers = {
+    "Accept": "application/json",
+    ...(options.headers || {}),
+    ...(config.apiKey ? { "X-API-Key": config.apiKey } : {})
+  };
+
+  const primaryUrl = resolveUrl(endpoint, config.baseUrl);
+
+  try {
+    const res = await fetch(primaryUrl, {
+      ...options,
+      signal: controller.signal,
+      headers
+    });
+    clearTimeout(timeoutId);
+    return res;
+  } catch (primaryErr) {
+    clearTimeout(timeoutId);
+
+    // If a custom baseUrl was used and failed with a network error, try relative proxy as fallback
+    if (config.baseUrl && config.baseUrl !== "" && primaryErr.name !== "AbortError") {
+      try {
+        const fallbackController = new AbortController();
+        const fallbackTimer = setTimeout(() => fallbackController.abort(), Math.min(timeoutMs, 4000));
+        const fallbackUrl = resolveUrl(endpoint, "");
+        const fallbackRes = await fetch(fallbackUrl, {
+          ...options,
+          signal: fallbackController.signal,
+          headers
+        });
+        clearTimeout(fallbackTimer);
+        return fallbackRes;
+      } catch {
+        // Fall through to throw primary error
+      }
+    }
+    throw primaryErr;
+  }
 };
 
 /**
  * Health check: verify backend status & loaded model availability.
  */
 export const checkBackendHealth = async () => {
-  const config = getApiConfig();
-
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4000);
-    const headers = {
-      "Accept": "application/json",
-      ...(config.apiKey ? { "X-API-Key": config.apiKey } : {})
-    };
-
-    let response;
-    try {
-      response = await fetch(`${config.baseUrl}/api/health`, {
-        method: "GET",
-        signal: controller.signal,
-        headers
-      });
-    } catch (fetchErr) {
-      if (config.baseUrl && config.baseUrl !== "") {
-        response = await fetch("/api/health", {
-          method: "GET",
-          signal: controller.signal,
-          headers
-        });
-      } else {
-        throw fetchErr;
-      }
-    }
-    clearTimeout(timeoutId);
+    const response = await fetchWithTimeout("/api/health", { method: "GET" }, 3500);
 
     if (response.ok) {
       const data = await response.json();
       return { 
         status: "online", 
-        message: "Connected to Python OCR Backend (TamilCNN)", 
+        message: data.service || "Connected to Python OCR Backend (TamilCNN)", 
         details: data 
       };
     } else {
@@ -67,9 +113,12 @@ export const checkBackendHealth = async () => {
       };
     }
   } catch (err) {
+    const isTimeout = err.name === "AbortError";
     return { 
       status: "offline", 
-      message: `Backend unreachable at ${config.baseUrl}. Check server status.` 
+      message: isTimeout 
+        ? "Backend health check timed out. Verify FastAPI server on port 8000."
+        : "Backend unreachable. Verify server is running on port 8000."
     };
   }
 };
@@ -78,21 +127,28 @@ export const checkBackendHealth = async () => {
  * Get active model architecture & validation metrics.
  */
 export const fetchModelInfo = async () => {
-  const config = getApiConfig();
   try {
-    let res;
-    try {
-      res = await fetch(`${config.baseUrl}/api/model-info`);
-    } catch (e) {
-      if (config.baseUrl && config.baseUrl !== "") {
-        res = await fetch("/api/model-info");
-      } else {
-        throw e;
-      }
+    const res = await fetchWithTimeout("/api/model-info", { method: "GET" }, 4000);
+    if (res.ok) {
+      return await res.json();
     }
-    if (res && res.ok) return await res.json();
   } catch (e) {
-    console.warn("fetchModelInfo error:", e);
+    console.warn("fetchModelInfo request issue:", e.message);
+  }
+  return null;
+};
+
+/**
+ * Get comparative benchmarks between T3.7 TamilCNN and Bodhan Indic-OCR.
+ */
+export const fetchModelComparison = async () => {
+  try {
+    const res = await fetchWithTimeout("/api/model-comparison", { method: "GET" }, 4000);
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (e) {
+    console.warn("fetchModelComparison request issue:", e.message);
   }
   return null;
 };
@@ -104,115 +160,90 @@ export const fetchModelInfo = async () => {
 export const processDocumentOCR = async (file, metadata = {}) => {
   const config = getApiConfig();
 
-  // If connected to live backend
+  const formData = new FormData();
+  formData.append("file", file);
+  if (metadata.title || metadata.tamilTitle) {
+    formData.append("title", metadata.title || metadata.tamilTitle);
+  }
+  if (metadata.department) {
+    formData.append("department", metadata.department);
+  }
+  if (metadata.year || metadata.docYear) {
+    formData.append("year", metadata.year || metadata.docYear);
+  }
+  if (metadata.district) {
+    formData.append("district", metadata.district);
+  }
+  const selectedModel = metadata.model || config.modelName || "TamilCNN-T3.7-Indic";
+  formData.append("model", selectedModel);
+  formData.append("metadata", JSON.stringify({ ...metadata, model: selectedModel }));
+
   try {
-    const formData = new FormData();
-    formData.append("file", file);
-    if (metadata.title || metadata.tamilTitle) {
-      formData.append("title", metadata.title || metadata.tamilTitle);
-    }
-    if (metadata.department) {
-      formData.append("department", metadata.department);
-    }
-    if (metadata.year || metadata.docYear) {
-      formData.append("year", metadata.year || metadata.docYear);
-    }
-    if (metadata.district) {
-      formData.append("district", metadata.district);
-    }
-    formData.append("metadata", JSON.stringify(metadata));
-
-    const requestHeaders = {
-      ...(config.apiKey ? { "X-API-Key": config.apiKey } : {})
-    };
-
-    let response;
-    try {
-      response = await fetch(`${config.baseUrl}/api/ocr`, {
+    // Neural model inference timeout: 45 seconds
+    const response = await fetchWithTimeout(
+      "/api/ocr", 
+      {
         method: "POST",
-        headers: requestHeaders,
         body: formData
-      });
-    } catch (fetchErr) {
-      if (config.baseUrl && config.baseUrl !== "" && (fetchErr.name === "TypeError" || fetchErr.message?.includes("fetch"))) {
-        response = await fetch("/api/ocr", {
-          method: "POST",
-          headers: requestHeaders,
-          body: formData
-        });
-      } else {
-        throw fetchErr;
-      }
-    }
+      },
+      45000
+    );
 
     if (response.ok) {
-      const result = await response.json();
-      return result;
+      return await response.json();
     } else {
       const errData = await response.json().catch(() => ({}));
-      throw new Error(errData.detail || `Server returned ${response.status}`);
+      const detail = errData.detail || errData.message;
+      if (response.status === 401) {
+        throw new Error(detail || "Authentication required to access OCR service.");
+      }
+      if (response.status === 413) {
+        throw new Error("Uploaded image exceeds size limit of 15 MB.");
+      }
+      if (response.status === 400) {
+        throw new Error(detail || "Invalid image file format or metadata.");
+      }
+      throw new Error(detail || `Server returned error (${response.status})`);
     }
   } catch (error) {
+    if (error.name === "AbortError") {
+      throw new Error("OCR inference request timed out. The model took too long to respond.");
+    }
     console.error("OCR Request failed:", error);
     throw error;
   }
 };
 
 /**
- * Retrieve digitized archive history from SQLite.
+ * Retrieve digitized archive history from backend.
  */
 export const fetchHistory = async (limit = 50, offset = 0, search = "") => {
-  const config = getApiConfig();
   try {
-    const url = new URL(`${config.baseUrl}/api/history`);
-    url.searchParams.set("limit", limit);
-    url.searchParams.set("offset", offset);
-    if (search) url.searchParams.set("search", search);
+    const params = new URLSearchParams({
+      limit: String(limit),
+      offset: String(offset)
+    });
+    if (search) params.set("search", search);
 
-    let res;
-    try {
-      res = await fetch(url.toString());
-    } catch (err) {
-      if (config.baseUrl && config.baseUrl !== "") {
-        const fallbackUrl = new URL(`/api/history`, window.location.origin);
-        fallbackUrl.searchParams.set("limit", limit);
-        fallbackUrl.searchParams.set("offset", offset);
-        if (search) fallbackUrl.searchParams.set("search", search);
-        res = await fetch(fallbackUrl.toString());
-      } else {
-        throw err;
-      }
-    }
+    const res = await fetchWithTimeout(`/api/history?${params.toString()}`, { method: "GET" }, 5000);
     if (res.ok) {
       const data = await res.json();
       return data.records || [];
     }
   } catch (err) {
-    console.warn("fetchHistory failed:", err);
+    console.warn("fetchHistory request issue:", err.message);
   }
   return [];
 };
 
 /**
- * Delete a recognized archive record from SQLite.
+ * Delete a recognized archive record from backend.
  */
 export const deleteHistoryRecord = async (recordId) => {
-  const config = getApiConfig();
   try {
-    let res;
-    try {
-      res = await fetch(`${config.baseUrl}/api/history/${recordId}`, {
-        method: "DELETE"
-      });
-    } catch (err) {
-      if (config.baseUrl && config.baseUrl !== "") {
-        res = await fetch(`/api/history/${recordId}`, {
-          method: "DELETE"
-        });
-      } else {
-        throw err;
-      }
-    }
+    const res = await fetchWithTimeout(`/api/history/${encodeURIComponent(recordId)}`, {
+      method: "DELETE"
+    }, 5000);
     return res.ok;
   } catch (err) {
     console.error("deleteHistoryRecord failed:", err);
@@ -221,26 +252,17 @@ export const deleteHistoryRecord = async (recordId) => {
 };
 
 /**
- * Fetch live dashboard statistics from SQLite backend.
+ * Fetch live dashboard statistics from backend with optional timeline range.
  */
-export const fetchDashboardStats = async () => {
-  const config = getApiConfig();
+export const fetchDashboardStats = async (range = "6 months") => {
   try {
-    let res;
-    try {
-      res = await fetch(`${config.baseUrl}/api/dashboard/stats`);
-    } catch (err) {
-      if (config.baseUrl && config.baseUrl !== "") {
-        res = await fetch("/api/dashboard/stats");
-      } else {
-        throw err;
-      }
-    }
+    const cleanRange = range.replace(" ", "_");
+    const res = await fetchWithTimeout(`/api/dashboard/stats?range=${encodeURIComponent(cleanRange)}`, { method: "GET" }, 5000);
     if (res.ok) {
       return await res.json();
     }
   } catch (err) {
-    console.warn("fetchDashboardStats failed:", err);
+    console.warn("fetchDashboardStats request issue:", err.message);
   }
   return null;
 };

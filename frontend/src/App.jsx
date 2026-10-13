@@ -58,35 +58,40 @@ const MainLayout = ({ children }) => {
   );
 };
 
+import ErrorBoundary from './components/ErrorBoundary';
+
 const App = () => {
   return (
-    <ThemeProvider>
-      <LanguageProvider>
-        <AuthProvider>
-          <BrowserRouter>
-            <Routes>
-              {/* Public Auth Routes */}
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
+    <ErrorBoundary>
+      <ThemeProvider>
+        <LanguageProvider>
+          <AuthProvider>
+            <BrowserRouter>
+              <Routes>
+                {/* Public Auth Routes */}
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
 
-              {/* Protected Main App Routes */}
-              <Route element={<ProtectedRoute />}>
-                <Route path="/" element={<MainLayout><Dashboard /></MainLayout>} />
-                <Route path="/upload" element={<MainLayout><DocumentUpload /></MainLayout>} />
-                <Route path="/pipeline" element={<MainLayout><OCRProcessing /></MainLayout>} />
-                <Route path="/results" element={<MainLayout><RecognitionResults /></MainLayout>} />
-                <Route path="/records" element={<MainLayout><DigitizedRecords /></MainLayout>} />
-                <Route path="/history" element={<MainLayout><ProcessingHistory /></MainLayout>} />
-                <Route path="/settings" element={<MainLayout><Settings /></MainLayout>} />
-              </Route>
-            </Routes>
-          </BrowserRouter>
-        </AuthProvider>
-      </LanguageProvider>
-    </ThemeProvider>
+                {/* Protected Main App Routes */}
+                <Route element={<ProtectedRoute />}>
+                  <Route path="/" element={<MainLayout><Dashboard /></MainLayout>} />
+                  <Route path="/upload" element={<MainLayout><DocumentUpload /></MainLayout>} />
+                  <Route path="/pipeline" element={<MainLayout><OCRProcessing /></MainLayout>} />
+                  <Route path="/results" element={<MainLayout><RecognitionResults /></MainLayout>} />
+                  <Route path="/records" element={<MainLayout><DigitizedRecords /></MainLayout>} />
+                  <Route path="/history" element={<MainLayout><ProcessingHistory /></MainLayout>} />
+                  <Route path="/settings" element={<MainLayout><Settings /></MainLayout>} />
+                </Route>
+              </Routes>
+            </BrowserRouter>
+          </AuthProvider>
+        </LanguageProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 };
 
 export default App;
+

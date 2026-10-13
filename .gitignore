@@ -23,3 +23,7 @@ ENV/
 # Raw Datasets
 Dataset/
 
+# Local Portable Binaries
+tesseract_bin/
+backend/tesseract_bin/
+

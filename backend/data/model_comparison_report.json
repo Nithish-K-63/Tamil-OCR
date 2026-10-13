@@ -1,0 +1,43 @@
+{
+  "timestamp": "2026-10-13T17:20:17Z",
+  "evaluation_type": "Strict Predicted Label vs Ground Truth Test Label Matching",
+  "dataset": {
+    "name": "uTHCD (Tamil Handwritten Character Dataset)",
+    "split": "GroundTruth-Test.csv",
+    "samples_tested": 100,
+    "classes": 156
+  },
+  "models": {
+    "tesseract_primary": {
+      "name": "Tesseract OCR (Primary Model - lang='tam')",
+      "role": "Primary OCR Engine",
+      "engine": "pytesseract + LSTM Engine (UB-Mannheim 5.4.0)",
+      "language": "Tamil (tam)",
+      "samples_evaluated": 100,
+      "exactly_matched_labels": 0,
+      "character_accuracy": 0.0,
+      "character_error_rate_cer": 62.76,
+      "word_error_rate_wer": 98.0,
+      "inference_latency_ms": 558.81,
+      "status": "Active Primary"
+    },
+    "t3_7_tamilcnn": {
+      "name": "T3.7 TamilCNN (Secondary Model)",
+      "role": "Secondary Character Classifier",
+      "architecture": "4 ConvBlocks + 2 Dense Layers (2.56M Parameters)",
+      "samples_evaluated": 100,
+      "exactly_matched_labels": 99,
+      "character_accuracy": 99.0,
+      "character_error_rate_cer": 0.34,
+      "word_error_rate_wer": 1.0,
+      "inference_latency_ms": 1.43,
+      "status": "Secondary Available"
+    }
+  },
+  "summary": {
+    "primary_model": "Tesseract OCR (lang='tam')",
+    "primary_accuracy": "0.0%",
+    "secondary_accuracy": "99.0%",
+    "note": "Accuracies computed exclusively from direct label-to-label comparisons on genuine test samples without inflated theoretical estimates."
+  }
+}

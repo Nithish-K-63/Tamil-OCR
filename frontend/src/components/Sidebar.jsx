@@ -13,10 +13,23 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 
+import { fetchDashboardStats } from '../api/ocrApi';
+
 const Sidebar = ({ isOpen, onClose }) => {
   const { user, logout } = useAuth();
   const { t } = useLanguage();
   const location = useLocation();
+  const [recordCount, setRecordCount] = React.useState(null);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    fetchDashboardStats().then(data => {
+      if (isMounted && data?.total_documents !== undefined) {
+        setRecordCount(data.total_documents);
+      }
+    }).catch(() => {});
+    return () => { isMounted = false; };
+  }, []);
 
   const navItems = [
     { path: '/', label: t('nav_dashboard', 'Dashboard'), icon: LayoutGrid },
@@ -124,7 +137,9 @@ const Sidebar = ({ isOpen, onClose }) => {
           </div>
           <div className="truncate">
             <p className="text-xs font-semibold text-[#1A1523] dark:text-white truncate">{t('sidebar_past_title', 'Preserving our past')}</p>
-            <p className="text-[10px] text-[#7A7185] dark:text-[#9D8DA6] truncate">{t('sidebar_past_sub', '2,486 records digitized')}</p>
+            <p className="text-[10px] text-[#7A7185] dark:text-[#9D8DA6] truncate">
+              {recordCount !== null ? `${recordCount.toLocaleString()} records digitized` : t('sidebar_past_sub', 'Records digitized')}
+            </p>
           </div>
         </div>
 

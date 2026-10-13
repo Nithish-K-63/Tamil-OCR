@@ -10,6 +10,7 @@ import {
   FileText 
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+import { fetchHistory } from '../api/ocrApi';
 
 const DigitizedRecords = () => {
   const navigate = useNavigate();
@@ -75,23 +76,26 @@ const DigitizedRecords = () => {
   const [liveRecords, setLiveRecords] = useState(null);
 
   React.useEffect(() => {
-    import('../api/ocrApi').then(({ fetchHistory }) => {
-      fetchHistory(50, 0, search).then(data => {
-        if (data && data.length > 0) {
-          setLiveRecords(data.map(r => ({
-            id: r.id,
-            title: r.title,
-            department: r.department,
-            year: r.year,
-            category: r.category || 'Land Record',
-            confidence: `${r.confidence}%`,
-            status: r.status,
-            stamp: r.year,
-            tamil_text: r.tamil_text
-          })));
-        }
-      });
-    });
+    let isMounted = true;
+    fetchHistory(50, 0, search).then(data => {
+      if (isMounted && data && data.length > 0) {
+        setLiveRecords(data.map(r => ({
+          id: r.id,
+          title: r.title,
+          department: r.department,
+          year: r.year,
+          category: r.category || 'Land Record',
+          confidence: `${r.confidence}%`,
+          status: r.status,
+          stamp: r.year,
+          tamil_text: r.tamil_text
+        })));
+      }
+    }).catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
   }, [search]);
 
   const activeList = liveRecords || records;
@@ -112,7 +116,7 @@ const DigitizedRecords = () => {
             {t('records_heading', 'Preserved Records')}
           </h2>
           <p className="text-xs text-[#7A7185] dark:text-[#9D93A7] mt-1 font-english">
-            <span className="font-bold text-[#00737D]">2,486</span> {t('records_subheading_1', 'digitized manuscripts in the archive')}
+            <span className="font-bold text-[#00737D]">{activeList.length.toLocaleString()}</span> {t('records_subheading_1', 'digitized manuscripts in the archive')}
           </p>
         </div>
 

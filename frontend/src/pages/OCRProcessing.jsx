@@ -45,8 +45,8 @@ const OCRProcessing = () => {
       desc: t('stage_2_desc', "Extracting handwritten Tamil text lines and character contour regions") 
     },
     { 
-      name: t('stage_3_name', "Deep TamilCNN Script Recognition"), 
-      desc: t('stage_3_desc', "156-class character classification with 97.3% Top-1 validation accuracy") 
+      name: t('stage_3_name', "Primary Tamil Script Recognition"), 
+      desc: t('stage_3_desc', "Tesseract OCR (lang='tam') with secondary neural classifier") 
     },
     { 
       name: t('stage_4_name', "Unicode Reconstruction & Post-Processing"), 

@@ -41,14 +41,19 @@ export default defineConfig(({ mode }) => {
         '/api': {
           target: 'http://127.0.0.1:8000',
           changeOrigin: true,
-          timeout: 120000,
-          proxyTimeout: 120000,
+          timeout: 30000,
+          proxyTimeout: 30000,
         },
       },
       watch: {
         ignored: [
           '**/.figma/**',
-],
+          '**/backend/**',
+          '**/Dataset/**',
+          '**/*.db',
+          '**/*.sqlite3',
+          '**/__pycache__/**',
+        ],
       },
     },
     preview: {
@@ -69,10 +74,14 @@ function backendManagerPlugin(): Plugin {
     name: 'backend-manager',
     configureServer(server) {
       const checkAndStartBackend = () => {
-        const req = http.get('http://127.0.0.1:8000/api/health', (res) => {
+        const req = http.get('http://127.0.0.1:8000/api/health', { timeout: 3000 }, (res) => {
           if (res.statusCode === 200) {
             console.log('[TamilOCR] Inference backend already active on http://127.0.0.1:8000')
           }
+        })
+
+        req.on('timeout', () => {
+          req.destroy()
         })
 
         req.on('error', () => {
@@ -379,8 +388,10 @@ function figmaReactRefreshBoundaryFallback(): Plugin {
 
       if (hasRefreshBoundary) lostRefreshBoundaries.delete(moduleId)
       if (previousHadRefreshBoundary && !hasRefreshBoundary) {
-        lostRefreshBoundaries.add(moduleId)
-        queueMicrotask(() => sendFullReload?.())
+        if (!lostRefreshBoundaries.has(moduleId)) {
+          lostRefreshBoundaries.add(moduleId)
+          queueMicrotask(() => sendFullReload?.())
+        }
       }
 
       return null

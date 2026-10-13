@@ -1,3 +1,6 @@
+import React from 'react';
 import App from '../frontend/src/App.jsx';
 
-export default App;
+export default function RootApp() {
+  return <App />;
+}

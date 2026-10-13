@@ -538,59 +538,219 @@ def delete_record(record_id: str) -> bool:
     return deleted_atlas or deleted_sqlite
 
 
-def get_dashboard_stats() -> Dict[str, Any]:
-    """Calculate aggregate portal digitization statistics."""
+def get_dashboard_stats(time_range: str = "6 months") -> Dict[str, Any]:
+    """
+    Calculate aggregate portal digitization statistics directly from database records.
+    Supports MongoDB Atlas and SQLite fallback with 100% data reconciliation.
+    """
+    now = datetime.datetime.now()
+    current_ym = f"{now.year:04d}-{now.month:02d}"
+
+    # Generate timeline slots based on requested time_range
+    timeline_labels = []
+    month_slots = []
+    if time_range == "12 months":
+        for i in range(11, -1, -1):
+            y = now.year - (1 if (now.month - i) <= 0 else 0)
+            m = now.month - i if (now.month - i) > 0 else (now.month - i + 12)
+            month_slots.append(f"{y:04d}-{m:02d}")
+            timeline_labels.append(datetime.date(y, m, 1).strftime("%b"))
+    elif time_range == "30 days":
+        # 6 evenly spaced 5-day intervals across last 30 days
+        date_intervals = []
+        for i in range(5, -1, -1):
+            start_d = now - datetime.timedelta(days=(i + 1) * 5)
+            end_d = now - datetime.timedelta(days=i * 5)
+            date_intervals.append((start_d.isoformat(), end_d.isoformat()))
+            timeline_labels.append(end_d.strftime("%b %d"))
+    else:  # Default: 6 months
+        for i in range(5, -1, -1):
+            y = now.year - (1 if (now.month - i) <= 0 else 0)
+            m = now.month - i if (now.month - i) > 0 else (now.month - i + 12)
+            month_slots.append(f"{y:04d}-{m:02d}")
+            timeline_labels.append(datetime.date(y, m, 1).strftime("%b"))
+
+    # 1. Try MongoDB Atlas if connected
     if _db_status["atlas_connected"] and _mongo_db is not None:
         try:
             records_col = _mongo_db["records"]
-            total = records_col.count_documents({})
-            verified = records_col.count_documents({"status": "Verified"})
-            review = records_col.count_documents({"status": {"$in": ["Review", "Needs Review"]}})
-            draft = records_col.count_documents({"status": "Draft"})
+            total_docs = records_col.count_documents({})
+            verified_count = records_col.count_documents({"status": "Verified"})
+            review_count = records_col.count_documents({"status": {"$in": ["Review", "Needs Review"]}})
+            draft_count = records_col.count_documents({"status": "Draft"})
+            pending_count = records_col.count_documents({"status": {"$ne": "Verified"}})
 
-            pipeline = [{"$group": {"_id": None, "avg_conf": {"$avg": "$confidence"}}}]
-            agg = list(records_col.aggregate(pipeline))
-            avg_conf = agg[0]["avg_conf"] if agg and agg[0]["avg_conf"] is not None else 93.6
+            this_month_total = records_col.count_documents({"created_at": {"$regex": f"^{current_ym}"}})
+            this_month_verified = records_col.count_documents({"created_at": {"$regex": f"^{current_ym}"}, "status": "Verified"})
+
+            # Confidence aggregation
+            conf_agg = list(records_col.aggregate([
+                {"$match": {"confidence": {"$ne": None, "$gte": 0}}},
+                {"$group": {
+                    "_id": None,
+                    "avg_conf": {"$avg": "$confidence"},
+                    "valid_count": {"$sum": 1},
+                    "high_count": {"$sum": {"$cond": [{"$gt": ["$confidence", 90]}, 1, 0]}},
+                    "mod_count": {"$sum": {"$cond": [{"$and": [{"$gte": ["$confidence", 80]}, {"$lte": ["$confidence", 90]}]}, 1, 0]}},
+                    "low_count": {"$sum": {"$cond": [{"$lt": ["$confidence", 80]}, 1, 0]}}
+                }}
+            ]))
+
+            if conf_agg:
+                agg_data = conf_agg[0]
+                avg_conf = round(float(agg_data.get("avg_conf", 0.0)), 1)
+                valid_conf_count = int(agg_data.get("valid_count", 0))
+                high_count = int(agg_data.get("high_count", 0))
+                mod_count = int(agg_data.get("mod_count", 0))
+                low_count = int(agg_data.get("low_count", 0))
+            else:
+                avg_conf = None
+                valid_conf_count = high_count = mod_count = low_count = 0
+
+            # Timeline counts
+            timeline_counts = []
+            if time_range == "30 days":
+                for start_iso, end_iso in date_intervals:
+                    c = records_col.count_documents({"created_at": {"$gte": start_iso, "$lt": end_iso}})
+                    timeline_counts.append(c)
+            else:
+                monthly_agg = list(records_col.aggregate([
+                    {"$group": {"_id": {"$substr": ["$created_at", 0, 7]}, "count": {"$sum": 1}}}
+                ]))
+                counts_by_ym = {item["_id"]: item["count"] for item in monthly_agg if item.get("_id")}
+                timeline_counts = [counts_by_ym.get(ym, 0) for ym in month_slots]
+
+            # Recent records
+            recent_docs = list(records_col.find({}, {"_id": 0}).sort("created_at", pymongo.DESCENDING).limit(5))
+
+            if valid_conf_count > 0:
+                high_pct = round((high_count / valid_conf_count) * 100, 1)
+                mod_pct = round((mod_count / valid_conf_count) * 100, 1)
+                low_pct = round((low_count / valid_conf_count) * 100, 1)
+            else:
+                high_pct = mod_pct = low_pct = 0.0
 
             return {
-                "total_documents": 2486 + total - 5,
-                "processed_records": 2318 + verified - 4,
-                "pending_documents": 168 + review - 1,
-                "avg_confidence": round(avg_conf, 1),
-                "status_distribution": {
-                    "high_confidence_pct": 78,
-                    "needs_review_pct": 16,
-                    "low_confidence_pct": 6
-                }
+                "total_documents": total_docs,
+                "processed_records": verified_count,
+                "pending_documents": pending_count,
+                "review_needed_count": review_count,
+                "draft_count": draft_count,
+                "total_this_month": this_month_total,
+                "verified_this_month": this_month_verified,
+                "avg_confidence": avg_conf,
+                "valid_confidence_records": valid_conf_count,
+                "confidence_distribution": {
+                    "high_confidence_count": high_count,
+                    "high_confidence_pct": high_pct,
+                    "moderate_confidence_count": mod_count,
+                    "moderate_confidence_pct": mod_pct,
+                    "low_confidence_count": low_count,
+                    "low_confidence_pct": low_pct
+                },
+                "timeline": {
+                    "range": time_range,
+                    "labels": timeline_labels,
+                    "counts": timeline_counts,
+                    "max_val": max(timeline_counts) if timeline_counts else 0
+                },
+                "recent_records": recent_docs
             }
         except Exception as e:
             logger.error(f"[MongoDB Atlas] get_dashboard_stats failed, using SQLite: {e}")
 
+    # 2. SQLite local fallback
     conn = get_sqlite_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT COUNT(*), AVG(confidence) FROM records")
-    total, avg_conf = cursor.fetchone()
-    
-    cursor.execute("SELECT COUNT(*) FROM records WHERE status = 'Verified'")
-    verified = cursor.fetchone()[0]
-    
-    cursor.execute("SELECT COUNT(*) FROM records WHERE status IN ('Review', 'Needs Review')")
-    review = cursor.fetchone()[0]
+    cur = conn.cursor()
 
-    cursor.execute("SELECT COUNT(*) FROM records WHERE status = 'Draft'")
-    draft = cursor.fetchone()[0]
+    cur.execute("""
+        SELECT 
+            COUNT(DISTINCT id) as total_docs,
+            SUM(CASE WHEN status = 'Verified' THEN 1 ELSE 0 END) as verified_count,
+            SUM(CASE WHEN status IN ('Review', 'Needs Review') THEN 1 ELSE 0 END) as review_count,
+            SUM(CASE WHEN status = 'Draft' THEN 1 ELSE 0 END) as draft_count,
+            SUM(CASE WHEN status != 'Verified' THEN 1 ELSE 0 END) as pending_count,
+            COUNT(CASE WHEN confidence IS NOT NULL AND confidence >= 0 THEN 1 END) as valid_conf_count,
+            AVG(CASE WHEN confidence IS NOT NULL AND confidence >= 0 THEN confidence END) as avg_conf,
+            SUM(CASE WHEN confidence > 90 THEN 1 ELSE 0 END) as high_conf,
+            SUM(CASE WHEN confidence >= 80 AND confidence <= 90 THEN 1 ELSE 0 END) as moderate_conf,
+            SUM(CASE WHEN confidence < 80 AND confidence >= 0 THEN 1 ELSE 0 END) as low_conf,
+            SUM(CASE WHEN substr(created_at, 1, 7) = ? THEN 1 ELSE 0 END) as this_month_total,
+            SUM(CASE WHEN substr(created_at, 1, 7) = ? AND status = 'Verified' THEN 1 ELSE 0 END) as this_month_verified
+        FROM records
+    """, (current_ym, current_ym))
 
+    row = dict(cur.fetchone())
+    total_docs = row["total_docs"] or 0
+    verified_count = row["verified_count"] or 0
+    pending_count = row["pending_count"] or 0
+    review_count = row["review_count"] or 0
+    draft_count = row["draft_count"] or 0
+    valid_conf_count = row["valid_conf_count"] or 0
+    this_month_total = row["this_month_total"] or 0
+    this_month_verified = row["this_month_verified"] or 0
+    avg_conf = round(row["avg_conf"], 1) if row["avg_conf"] is not None else None
+
+    high_count = row["high_conf"] or 0
+    mod_count = row["moderate_conf"] or 0
+    low_count = row["low_conf"] or 0
+
+    if valid_conf_count > 0:
+        high_pct = round((high_count / valid_conf_count) * 100, 1)
+        mod_pct = round((mod_count / valid_conf_count) * 100, 1)
+        low_pct = round((low_count / valid_conf_count) * 100, 1)
+    else:
+        high_pct = mod_pct = low_pct = 0.0
+
+    # Timeline calculation
+    timeline_counts = []
+    if time_range == "30 days":
+        for start_iso, end_iso in date_intervals:
+            cur.execute("""
+                SELECT COUNT(*) FROM records 
+                WHERE created_at >= ? AND created_at < ?
+            """, (start_iso, end_iso))
+            timeline_counts.append(cur.fetchone()[0])
+    else:
+        cur.execute("SELECT substr(created_at, 1, 7) as ym, COUNT(*) as cnt FROM records GROUP BY ym")
+        counts_by_ym = dict(cur.fetchall())
+        timeline_counts = [counts_by_ym.get(ym, 0) for ym in month_slots]
+
+    # Recent records
+    cur.execute("""
+        SELECT id, title, department, year, district, category, status, confidence, file_name, created_at
+        FROM records
+        ORDER BY created_at DESC
+        LIMIT 5
+    """)
+    recent_docs = [dict(r) for r in cur.fetchall()]
     conn.close()
+
     return {
-        "total_documents": 2486 + total - 5,
-        "processed_records": 2318 + verified - 4,
-        "pending_documents": 168 + review - 1,
-        "avg_confidence": round(avg_conf or 93.6, 1),
-        "status_distribution": {
-            "high_confidence_pct": 78,
-            "needs_review_pct": 16,
-            "low_confidence_pct": 6
-        }
+        "total_documents": total_docs,
+        "processed_records": verified_count,
+        "pending_documents": pending_count,
+        "review_needed_count": review_count,
+        "draft_count": draft_count,
+        "total_this_month": this_month_total,
+        "verified_this_month": this_month_verified,
+        "avg_confidence": avg_conf,
+        "valid_confidence_records": valid_conf_count,
+        "confidence_distribution": {
+            "high_confidence_count": high_count,
+            "high_confidence_pct": high_pct,
+            "moderate_confidence_count": mod_count,
+            "moderate_confidence_pct": mod_pct,
+            "low_confidence_count": low_count,
+            "low_confidence_pct": low_pct
+        },
+        "timeline": {
+            "range": time_range,
+            "labels": timeline_labels,
+            "counts": timeline_counts,
+            "max_val": max(timeline_counts) if timeline_counts else 0
+        },
+        "recent_records": recent_docs
     }
 
 
