@@ -129,3 +129,21 @@ def load_tamil_model(device: str = DEVICE) -> TamilCNN:
 def get_model_metadata() -> Dict[str, Any]:
     """Return current model metadata and training metrics."""
     return _model_metadata
+
+
+def reload_tamil_model(device: str = DEVICE) -> TamilCNN:
+    """Clear cached model and reload weights and metadata dynamically from disk."""
+    global _cached_model
+    _cached_model = None
+    return load_tamil_model(device=device)
+
+
+def update_model_metadata(val_acc: float, epoch: int = 1, extra: Optional[Dict[str, Any]] = None):
+    """Dynamically update model metadata values."""
+    global _model_metadata
+    _model_metadata["val_acc"] = float(val_acc)
+    _model_metadata["top1_validation_acc"] = float(val_acc)
+    _model_metadata["epoch"] = int(epoch)
+    if extra:
+        _model_metadata.update(extra)
+

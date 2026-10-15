@@ -163,7 +163,12 @@ class TamilOCREngine:
                 results.append((c, pct, idx.item()))
             return results
 
-    def recognize_image(self, image_input: Union[bytes, np.ndarray, str]) -> Dict[str, Any]:
+    def recognize_image(
+        self,
+        image_input: Union[bytes, np.ndarray, str],
+        filename: str = "document.jpg",
+        **kwargs
+    ) -> Dict[str, Any]:
         """
         Perform complete Tamil manuscript / document OCR inference.
         """

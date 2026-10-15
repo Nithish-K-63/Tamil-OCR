@@ -16,8 +16,10 @@ from pymongo.errors import (
     PyMongoError
 )
 
+from pathlib import Path
 from app.config import (
     DB_PATH,
+    DATA_DIR,
     MONGODB_URI,
     MONGODB_DB_NAME,
     MONGODB_CLUSTER,
@@ -390,12 +392,12 @@ def get_db_health() -> Dict[str, Any]:
 def add_record(record_data: Dict[str, Any]) -> Dict[str, Any]:
     """
     Persist new recognized Tamil document metadata and OCR result.
-    Saves to MongoDB Atlas when connected, and maintains SQLite backup.
+    Saves to MongoDB Atlas as the primary persistent storage layer.
     """
     now_iso = datetime.datetime.now().isoformat()
     record = {
         "id": record_data["id"],
-        "title": record_data.get("title", "தமிழ் ஆவணம்"),
+        "title": record_data.get("title", "நிலப் பதிவு ஆவணம்"),
         "department": record_data.get("department", "Revenue Department"),
         "year": str(record_data.get("year", "1978")),
         "district": record_data.get("district", "Thanjavur"),
@@ -407,12 +409,13 @@ def add_record(record_data: Dict[str, Any]) -> Dict[str, Any]:
         "lines_count": int(record_data.get("lines_count", 0)),
         "tamil_text": record_data.get("tamil_text", ""),
         "file_name": record_data.get("file_name", "upload.jpg"),
-        "model_name": record_data.get("model_name", "T3.7-Indic-Tamil-CNN"),
+        "image_path": record_data.get("image_path", f"data/uploads/{record_data['id']}_{record_data.get('file_name', 'upload.jpg')}"),
+        "model_name": record_data.get("model_name", "Tesseract OCR (Primary)"),
         "processing_time_ms": float(record_data.get("processing_time_ms", 100.0)),
         "created_at": record_data.get("created_at", now_iso)
     }
 
-    # 1. Save to MongoDB Atlas if connected
+    # 1. Primary write directly to MongoDB Atlas
     if _db_status["atlas_connected"] and _mongo_db is not None:
         try:
             mongo_doc = dict(record)
@@ -421,19 +424,31 @@ def add_record(record_data: Dict[str, Any]) -> Dict[str, Any]:
                 {"$set": mongo_doc},
                 upsert=True
             )
-            # Log to processing_history audit collection
-            _mongo_db["processing_history"].insert_one({
-                "record_id": record["id"],
-                "action": "OCR_PROCESSED",
-                "status": record["status"],
-                "confidence": record["confidence"],
-                "created_at": now_iso
-            })
-            logger.info(f"[MongoDB Atlas] Document {record['id']} successfully saved to Atlas 'records' collection.")
+            # Log to processing_history audit collection (upsert prevents duplicate history entries on retry)
+            action = "DOCUMENT_UPLOADED" if record["status"] in ("Pending OCR", "Uploaded") else "OCR_PROCESSED"
+            _mongo_db["processing_history"].update_one(
+                {"document_id": record["id"], "action": action},
+                {"$set": {
+                    "document_id": record["id"],
+                    "record_id": record["id"],
+                    "action": action,
+                    "status": record["status"],
+                    "confidence": record["confidence"],
+                    "model_name": record["model_name"],
+                    "file_name": record["file_name"],
+                    "image_path": record.get("image_path"),
+                    "tamil_preview": (record.get("tamil_text") or "")[:120],
+                    "error": None,
+                    "created_at": record.get("created_at", now_iso)
+                }},
+                upsert=True
+            )
+            logger.info(f"[MongoDB Atlas] Document {record['id']} saved to 'records' collection (status: {record['status']}).")
+            return record
         except Exception as e:
             logger.error(f"[MongoDB Atlas] Failed to write document to Atlas: {e}")
 
-    # 2. Always maintain SQLite backup for resiliency
+    # 2. Resilient fallback only if Atlas is not reachable
     try:
         conn = get_sqlite_connection()
         cursor = conn.cursor()
@@ -453,25 +468,110 @@ def add_record(record_data: Dict[str, Any]) -> Dict[str, Any]:
         conn.commit()
         conn.close()
     except Exception as e:
-        logger.error(f"[SQLite] Failed to write document to SQLite: {e}")
+        logger.error(f"[SQLite Fallback] Failed to write document: {e}")
 
     return record
 
 
-def get_records(limit: int = 50, offset: int = 0, search: str = "") -> List[Dict[str, Any]]:
+def record_processing_failure(
+    document_id: str,
+    file_name: str,
+    error_message: str,
+    model_name: str = "Tesseract OCR (Primary)"
+):
+    """
+    Record an uncompleted/failed OCR attempt in processing_history
+    without creating a false digitized record in the primary records collection.
+    """
+    now_iso = datetime.datetime.now().isoformat()
+    if _db_status["atlas_connected"] and _mongo_db is not None:
+        try:
+            _mongo_db["processing_history"].insert_one({
+                "document_id": document_id,
+                "record_id": document_id,
+                "action": "OCR_FAILED",
+                "status": "Failed",
+                "confidence": 0.0,
+                "model_name": model_name,
+                "file_name": file_name,
+                "error": error_message,
+                "created_at": now_iso
+            })
+            logger.info("[MongoDB Atlas] Recorded OCR failure event for %s: %s", document_id, error_message)
+        except Exception as err:
+            logger.warning("Failed to record failure event in Atlas: %s", err)
+
+
+def get_processing_history(limit: int = 50, offset: int = 0) -> List[Dict[str, Any]]:
+    """Retrieve persistent processing events from MongoDB Atlas 'processing_history' collection."""
+    if _db_status["atlas_connected"] and _mongo_db is not None:
+        try:
+            cursor = (
+                _mongo_db["processing_history"]
+                .find({}, {"_id": 0})
+                .sort("created_at", pymongo.DESCENDING)
+                .skip(offset)
+                .limit(limit)
+            )
+            return list(cursor)
+        except Exception as e:
+            logger.error(f"[MongoDB Atlas] get_processing_history failed: {e}")
+
+    # Fallback from records
+    recs = get_records(limit=limit, offset=offset)
+    return [
+        {
+            "document_id": r.get("id"),
+            "record_id": r.get("id"),
+            "action": "OCR_PROCESSED",
+            "status": r.get("status", "Verified"),
+            "confidence": r.get("confidence", 90.0),
+            "model_name": r.get("model_name", "Tesseract OCR"),
+            "file_name": r.get("file_name", "document.jpg"),
+            "error": None,
+            "created_at": r.get("created_at")
+        }
+        for r in recs
+    ]
+
+
+def get_records(
+    limit: int = 50,
+    offset: int = 0,
+    search: str = "",
+    status: str = ""
+) -> List[Dict[str, Any]]:
     """Retrieve digitized archive records (from MongoDB Atlas or SQLite fallback)."""
     # Try MongoDB Atlas first if connected
     if _db_status["atlas_connected"] and _mongo_db is not None:
         try:
             query = {}
+            conditions = []
             if search:
-                query = {
+                conditions.append({
                     "$or": [
                         {"title": {"$regex": search, "$options": "i"}},
                         {"id": {"$regex": search, "$options": "i"}},
-                        {"tamil_text": {"$regex": search, "$options": "i"}}
+                        {"tamil_text": {"$regex": search, "$options": "i"}},
+                        {"file_name": {"$regex": search, "$options": "i"}}
                     ]
-                }
+                })
+            if status:
+                st = status.strip().lower()
+                if st in ("completed", "verified", "digitized", "processed", "completed_only"):
+                    conditions.append({"status": {"$in": ["Completed", "Verified"]}})
+                elif st in ("pending ocr", "pending_ocr", "uploaded"):
+                    conditions.append({"status": {"$in": ["Pending OCR", "Uploaded"]}})
+                elif st in ("pending", "review", "needs review"):
+                    conditions.append({"status": {"$in": ["Pending OCR", "Needs Review", "Review", "Pending", "Draft", "Uploaded"]}})
+                elif st != "all" and st != "all statuses":
+                    conditions.append({"status": {"$regex": f"^{status}$", "$options": "i"}})
+
+            if len(conditions) == 1:
+                query = conditions[0]
+            elif len(conditions) > 1:
+                query = {"$and": conditions}
+
             cursor = (
                 _mongo_db["records"]
                 .find(query, {"_id": 0})
@@ -486,15 +586,29 @@ def get_records(limit: int = 50, offset: int = 0, search: str = "") -> List[Dict
     # SQLite fallback
     conn = get_sqlite_connection()
     cursor = conn.cursor()
+    where_clauses = []
+    params = []
     if search:
         pattern = f"%{search}%"
-        cursor.execute("""
-        SELECT * FROM records 
-        WHERE title LIKE ? OR id LIKE ? OR tamil_text LIKE ?
-        ORDER BY created_at DESC LIMIT ? OFFSET ?
-        """, (pattern, pattern, pattern, limit, offset))
-    else:
-        cursor.execute("SELECT * FROM records ORDER BY created_at DESC LIMIT ? OFFSET ?", (limit, offset))
+        where_clauses.append("(title LIKE ? OR id LIKE ? OR tamil_text LIKE ? OR file_name LIKE ?)")
+        params.extend([pattern, pattern, pattern, pattern])
+    if status:
+        st = status.strip().lower()
+        if st in ("completed", "verified", "digitized", "processed", "completed_only"):
+            where_clauses.append("status IN ('Completed', 'Verified')")
+        elif st in ("pending ocr", "pending_ocr", "uploaded"):
+            where_clauses.append("status IN ('Pending OCR', 'Uploaded')")
+        elif st in ("pending", "review", "needs review"):
+            where_clauses.append("status IN ('Pending OCR', 'Needs Review', 'Review', 'Pending', 'Draft', 'Uploaded')")
+        elif st != "all" and st != "all statuses":
+            where_clauses.append("status LIKE ?")
+            params.append(status)
+
+    where_str = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
+    sql = f"SELECT * FROM records {where_str} ORDER BY created_at DESC LIMIT ? OFFSET ?"
+    params.extend([limit, offset])
+
+    cursor.execute(sql, tuple(params))
     rows = cursor.fetchall()
     conn.close()
     return [dict(row) for row in rows]
@@ -518,13 +632,164 @@ def get_record(record_id: str) -> Optional[Dict[str, Any]]:
     return dict(row) if row else None
 
 
-def delete_record(record_id: str) -> bool:
-    """Delete a record from database (Atlas and SQLite)."""
+def _delete_persisted_image(image_path: Optional[str], record_id: str):
+    """Safely remove uploaded image file from local storage upon record deletion."""
+    try:
+        deleted = False
+        if image_path:
+            p = Path(image_path)
+            if not p.is_absolute():
+                p = DATA_DIR.parent / p
+            if p.exists() and p.is_file() and record_id in p.name:
+                p.unlink()
+                deleted = True
+                logger.info(f"Deleted persisted image file: {p}")
+
+        if not deleted:
+            up_p = DATA_DIR / "uploads"
+            if up_p.exists():
+                for f in up_p.glob(f"{record_id}_*"):
+                    if f.is_file():
+                        f.unlink()
+                        logger.info(f"Deleted persisted image file: {f}")
+    except Exception as e:
+        logger.warning(f"Could not delete image file for {record_id}: {e}")
+
+
+def update_record(record_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """
+    Update a document's metadata or completed Tamil OCR text.
+    Preserves original_tamil_text if not already saved, so original OCR output is never lost.
+    Updates both MongoDB Atlas and SQLite fallback.
+    Synchronizes associated processing_history entry.
+    """
+    existing = get_record(record_id)
+    if not existing:
+        return None
+
+    update_fields = {}
+    now_iso = datetime.datetime.now().isoformat()
+
+    if "tamil_text" in updates and updates["tamil_text"] is not None:
+        new_text = updates["tamil_text"]
+        # Preserve original OCR text if not already saved
+        if "original_tamil_text" not in existing and existing.get("tamil_text"):
+            update_fields["original_tamil_text"] = existing["tamil_text"]
+        update_fields["tamil_text"] = new_text
+        update_fields["char_count"] = len(new_text)
+        update_fields["word_count"] = len(new_text.split())
+        update_fields["lines_count"] = len([l for l in new_text.splitlines() if l.strip()])
+
+    if "title" in updates and updates["title"]:
+        update_fields["title"] = updates["title"]
+    if "status" in updates and updates["status"]:
+        update_fields["status"] = updates["status"]
+    if "department" in updates and updates["department"]:
+        update_fields["department"] = updates["department"]
+    if "district" in updates and updates["district"]:
+        update_fields["district"] = updates["district"]
+    if "year" in updates and updates["year"]:
+        update_fields["year"] = str(updates["year"])
+    if "confidence" in updates and updates["confidence"] is not None:
+        update_fields["confidence"] = float(updates["confidence"])
+    if "model_name" in updates and updates["model_name"]:
+        update_fields["model_name"] = updates["model_name"]
+    if "processing_time_ms" in updates and updates["processing_time_ms"] is not None:
+        update_fields["processing_time_ms"] = float(updates["processing_time_ms"])
+    if "processed_at" in updates:
+        update_fields["processed_at"] = updates["processed_at"]
+
+    update_fields["updated_at"] = now_iso
+
+    # 1. Update in MongoDB Atlas
+    if _db_status["atlas_connected"] and _mongo_db is not None:
+        try:
+            _mongo_db["records"].update_one(
+                {"id": record_id},
+                {"$set": update_fields}
+            )
+
+            # Check if this was an OCR completion
+            new_status = update_fields.get("status", existing.get("status"))
+            if new_status in ("Completed", "Verified") and ("tamil_text" in update_fields or "confidence" in update_fields):
+                # Upsert OCR_PROCESSED event in processing_history
+                _mongo_db["processing_history"].update_one(
+                    {"document_id": record_id, "action": "OCR_PROCESSED"},
+                    {"$set": {
+                        "document_id": record_id,
+                        "record_id": record_id,
+                        "action": "OCR_PROCESSED",
+                        "status": new_status,
+                        "confidence": update_fields.get("confidence", existing.get("confidence", 0.0)),
+                        "model_name": update_fields.get("model_name", existing.get("model_name", "Tesseract OCR")),
+                        "file_name": existing.get("file_name", "document.jpg"),
+                        "image_path": existing.get("image_path"),
+                        "tamil_preview": (update_fields.get("tamil_text") or existing.get("tamil_text") or "")[:120],
+                        "error": None,
+                        "created_at": now_iso
+                    }},
+                    upsert=True
+                )
+            else:
+                # Log general text / metadata update event
+                _mongo_db["processing_history"].insert_one({
+                    "document_id": record_id,
+                    "record_id": record_id,
+                    "action": "RECORD_UPDATED",
+                    "status": new_status,
+                    "confidence": update_fields.get("confidence", existing.get("confidence", 0.0)),
+                    "model_name": update_fields.get("model_name", existing.get("model_name", "Tesseract OCR")),
+                    "file_name": existing.get("file_name", "document.jpg"),
+                    "details": "Transcription or metadata updated.",
+                    "created_at": now_iso
+                })
+        except Exception as e:
+            logger.error(f"[MongoDB Atlas] update_record failed: {e}")
+
+    # 2. Update SQLite
+    try:
+        conn = get_sqlite_connection()
+        cursor = conn.cursor()
+        set_parts = []
+        sql_params = []
+        for k, v in update_fields.items():
+            if k in ("title", "department", "year", "district", "status", "confidence", "char_count", "word_count", "lines_count", "tamil_text", "model_name", "processing_time_ms"):
+                set_parts.append(f"{k} = ?")
+                sql_params.append(v)
+        if set_parts:
+            sql_params.append(record_id)
+            cursor.execute(f"UPDATE records SET {', '.join(set_parts)} WHERE id = ?", tuple(sql_params))
+            conn.commit()
+        conn.close()
+    except Exception as e:
+        logger.error(f"[SQLite Fallback] update_record failed: {e}")
+
+    return get_record(record_id)
+
+
+def delete_record(record_id: str, delete_image: bool = True) -> bool:
+    """
+    Delete a document record from database (Atlas and SQLite).
+    Removes the document from 'records', purges all related 'processing_history' audit events,
+    and removes the persisted image file from disk storage.
+    """
     deleted_atlas = False
+    existing = get_record(record_id)
+    if not existing:
+        return False
+
     if _db_status["atlas_connected"] and _mongo_db is not None:
         try:
             res = _mongo_db["records"].delete_one({"id": record_id})
             deleted_atlas = res.deleted_count > 0
+            if deleted_atlas:
+                # Clean up associated history entries to keep database consistent
+                _mongo_db["processing_history"].delete_many({
+                    "$or": [{"document_id": record_id}, {"record_id": record_id}]
+                })
+                # Safely delete image file from persistent disk storage
+                if delete_image:
+                    _delete_persisted_image(existing.get("image_path"), record_id)
         except Exception as e:
             logger.error(f"[MongoDB Atlas] delete_record failed: {e}")
 
@@ -535,7 +800,42 @@ def delete_record(record_id: str) -> bool:
     conn.commit()
     conn.close()
 
+    if deleted_sqlite and not deleted_atlas and delete_image:
+        _delete_persisted_image(existing.get("image_path"), record_id)
+
     return deleted_atlas or deleted_sqlite
+
+
+def delete_history_event(event_id: str, delete_document: bool = False) -> bool:
+    """
+    Delete a specific history audit event from 'processing_history' in MongoDB Atlas.
+    If delete_document=True, also removes the parent document record and image.
+    """
+    if _db_status["atlas_connected"] and _mongo_db is not None:
+        try:
+            from bson import ObjectId
+            query = {}
+            if ObjectId.is_valid(event_id):
+                query = {"_id": ObjectId(event_id)}
+            else:
+                query = {"$or": [{"_id": event_id}, {"document_id": event_id}, {"record_id": event_id}]}
+
+            # Find matching event before deleting
+            evt = _mongo_db["processing_history"].find_one(query)
+            res = _mongo_db["processing_history"].delete_one(query)
+            deleted = res.deleted_count > 0
+
+            if deleted and delete_document and evt:
+                doc_id = evt.get("document_id") or evt.get("record_id")
+                if doc_id:
+                    delete_record(doc_id, delete_image=True)
+
+            return deleted
+        except Exception as e:
+            logger.error(f"[MongoDB Atlas] delete_history_event failed: {e}")
+            return False
+
+    return False
 
 
 def get_dashboard_stats(time_range: str = "6 months") -> Dict[str, Any]:
@@ -575,17 +875,17 @@ def get_dashboard_stats(time_range: str = "6 months") -> Dict[str, Any]:
         try:
             records_col = _mongo_db["records"]
             total_docs = records_col.count_documents({})
-            verified_count = records_col.count_documents({"status": "Verified"})
+            verified_count = records_col.count_documents({"status": {"$in": ["Completed", "Verified"]}})
             review_count = records_col.count_documents({"status": {"$in": ["Review", "Needs Review"]}})
             draft_count = records_col.count_documents({"status": "Draft"})
-            pending_count = records_col.count_documents({"status": {"$ne": "Verified"}})
+            pending_count = records_col.count_documents({"status": {"$nin": ["Completed", "Verified"]}})
 
             this_month_total = records_col.count_documents({"created_at": {"$regex": f"^{current_ym}"}})
-            this_month_verified = records_col.count_documents({"created_at": {"$regex": f"^{current_ym}"}, "status": "Verified"})
+            this_month_verified = records_col.count_documents({"created_at": {"$regex": f"^{current_ym}"}, "status": {"$in": ["Completed", "Verified"]}})
 
-            # Confidence aggregation
+            # Confidence aggregation (only genuine completed OCR records)
             conf_agg = list(records_col.aggregate([
-                {"$match": {"confidence": {"$ne": None, "$gte": 0}}},
+                {"$match": {"confidence": {"$ne": None, "$gt": 0}, "status": {"$in": ["Completed", "Verified"]}}},
                 {"$group": {
                     "_id": None,
                     "avg_conf": {"$avg": "$confidence"},
@@ -666,17 +966,17 @@ def get_dashboard_stats(time_range: str = "6 months") -> Dict[str, Any]:
     cur.execute("""
         SELECT 
             COUNT(DISTINCT id) as total_docs,
-            SUM(CASE WHEN status = 'Verified' THEN 1 ELSE 0 END) as verified_count,
+            SUM(CASE WHEN status IN ('Completed', 'Verified') THEN 1 ELSE 0 END) as verified_count,
             SUM(CASE WHEN status IN ('Review', 'Needs Review') THEN 1 ELSE 0 END) as review_count,
             SUM(CASE WHEN status = 'Draft' THEN 1 ELSE 0 END) as draft_count,
-            SUM(CASE WHEN status != 'Verified' THEN 1 ELSE 0 END) as pending_count,
-            COUNT(CASE WHEN confidence IS NOT NULL AND confidence >= 0 THEN 1 END) as valid_conf_count,
-            AVG(CASE WHEN confidence IS NOT NULL AND confidence >= 0 THEN confidence END) as avg_conf,
-            SUM(CASE WHEN confidence > 90 THEN 1 ELSE 0 END) as high_conf,
-            SUM(CASE WHEN confidence >= 80 AND confidence <= 90 THEN 1 ELSE 0 END) as moderate_conf,
-            SUM(CASE WHEN confidence < 80 AND confidence >= 0 THEN 1 ELSE 0 END) as low_conf,
+            SUM(CASE WHEN status NOT IN ('Completed', 'Verified') THEN 1 ELSE 0 END) as pending_count,
+            COUNT(CASE WHEN confidence IS NOT NULL AND confidence > 0 AND status IN ('Completed', 'Verified') THEN 1 END) as valid_conf_count,
+            AVG(CASE WHEN confidence IS NOT NULL AND confidence > 0 AND status IN ('Completed', 'Verified') THEN confidence END) as avg_conf,
+            SUM(CASE WHEN confidence > 90 AND status IN ('Completed', 'Verified') THEN 1 ELSE 0 END) as high_conf,
+            SUM(CASE WHEN confidence >= 80 AND confidence <= 90 AND status IN ('Completed', 'Verified') THEN 1 ELSE 0 END) as moderate_conf,
+            SUM(CASE WHEN confidence < 80 AND confidence > 0 AND status IN ('Completed', 'Verified') THEN 1 ELSE 0 END) as low_conf,
             SUM(CASE WHEN substr(created_at, 1, 7) = ? THEN 1 ELSE 0 END) as this_month_total,
-            SUM(CASE WHEN substr(created_at, 1, 7) = ? AND status = 'Verified' THEN 1 ELSE 0 END) as this_month_verified
+            SUM(CASE WHEN substr(created_at, 1, 7) = ? AND status IN ('Completed', 'Verified') THEN 1 ELSE 0 END) as this_month_verified
         FROM records
     """, (current_ym, current_ym))
 

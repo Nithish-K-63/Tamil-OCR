@@ -11,6 +11,7 @@ from app.api.routes_health import router as health_router
 from app.api.routes_ocr import router as ocr_router
 from app.api.routes_history import router as history_router
 from app.api.routes_dashboard import router as dashboard_router
+from app.api.routes_chat import router as chat_router
 
 # Configure Logging
 logging.basicConfig(
@@ -61,6 +62,15 @@ app.include_router(health_router)
 app.include_router(ocr_router)
 app.include_router(history_router)
 app.include_router(dashboard_router)
+app.include_router(chat_router)
+
+
+# Mount dedicated document uploads storage
+from fastapi.staticfiles import StaticFiles
+from app.config import DATA_DIR
+uploads_path = DATA_DIR / "uploads"
+uploads_path.mkdir(parents=True, exist_ok=True)
+app.mount("/api/uploads", StaticFiles(directory=str(uploads_path)), name="uploads")
 
 
 @app.get("/")

@@ -221,6 +221,7 @@ const Dashboard = () => {
           </button>
 
           <button
+            id="btn-dashboard-upload"
             onClick={() => navigate('/upload')}
             className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#00737D] hover:bg-[#005F67] text-white font-semibold text-xs shadow-md shadow-[#00737D]/20 transition-all cursor-pointer"
           >
@@ -252,10 +253,35 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((s, idx) => {
           const Icon = s.icon;
+          const handleCardClick = () => {
+            if (s.key === 'total') navigate('/records');
+            else if (s.key === 'processed') navigate('/records?status=Verified');
+            else if (s.key === 'pending') navigate('/records?status=Pending');
+            else if (s.key === 'conf') navigate('/records');
+          };
+
+          const cardTitle = s.key === 'total' 
+            ? 'Click to view all saved documents' 
+            : s.key === 'processed' 
+            ? 'Click to view successfully digitized records' 
+            : s.key === 'pending' 
+            ? 'Click to view documents needing review' 
+            : 'Click to view records archive';
+
           return (
             <div
               key={idx}
-              className="p-5 rounded-2xl border transition-all duration-200 bg-white/60 dark:bg-[#1D1726] border-[#DFD7C7] dark:border-[#2C2237] shadow-xs relative overflow-hidden"
+              role="button"
+              tabIndex={0}
+              onClick={handleCardClick}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleCardClick();
+                }
+              }}
+              title={cardTitle}
+              className="p-5 rounded-2xl border transition-all duration-200 bg-white/60 dark:bg-[#1D1726] border-[#DFD7C7] dark:border-[#2C2237] shadow-xs relative overflow-hidden cursor-pointer hover:border-[#00737D] dark:hover:border-[#2DD4BF] hover:shadow-md hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-[#00737D]"
             >
               {/* Corner accent border line matching reference */}
               <div className="absolute top-0 right-0 w-12 h-[2px] bg-[#00737D]/40" />
@@ -534,7 +560,7 @@ const Dashboard = () => {
               {recentRecords.length > 0 ? (
                 recentRecords.map((item) => {
                   const format = (item.file_name || 'JPG').split('.').pop().toUpperCase();
-                  const isVerified = item.status === 'Verified';
+                  const isVerified = item.status === 'Verified' || item.status === 'Completed';
                   const confDisplay = item.confidence !== undefined && item.confidence !== null 
                     ? `${item.confidence}%` 
                     : 'N/A';
@@ -542,7 +568,7 @@ const Dashboard = () => {
                   return (
                     <tr 
                       key={item.id} 
-                      onClick={() => navigate('/results')}
+                      onClick={() => navigate('/results', { state: { record: item } })}
                       className="hover:bg-black/2 dark:hover:bg-white/2 cursor-pointer transition-colors"
                     >
                       <td className="py-3.5 flex items-center gap-3">

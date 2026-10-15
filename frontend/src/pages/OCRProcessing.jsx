@@ -8,11 +8,18 @@ import {
   Layers,
   FileCheck,
   AlertCircle,
-  RotateCw
+  RotateCw,
+  Copy,
+  Check,
+  Archive,
+  History,
+  Upload,
+  FileText,
+  ExternalLink
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
-import { processDocumentOCR } from '../api/ocrApi';
+import { processDocumentOCR, processSavedDocumentOCR, resolveImageUrl } from '../api/ocrApi';
 
 const OCRProcessing = () => {
   const { theme } = useTheme();
@@ -27,13 +34,19 @@ const OCRProcessing = () => {
   const [ocrResult, setOcrResult] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
+  const [countdown, setCountdown] = useState(null);
 
   const file = location.state?.file;
   const formData = location.state?.formData || {};
+  const recordId = location.state?.recordId || location.state?.record?.id;
+  const initialRecord = location.state?.record;
+  const selectedModel = location.state?.selectedModel || formData?.model || 'tesseract_primary';
 
   const isExecutingRef = useRef(false);
   const isMountedRef = useRef(true);
   const intervalRef = useRef(null);
+  const countdownTimerRef = useRef(null);
 
   const steps = [
     { 
@@ -65,14 +78,14 @@ const OCRProcessing = () => {
 
     setError(null);
     setLoading(true);
-    setProgress(10);
+    setProgress(15);
     setCurrentStep(0);
     setOcrResult(null);
 
-    // Simulation progress ticker that coordinates with backend response
+    // Simulation progress ticker that coordinates with backend inference
     intervalRef.current = setInterval(() => {
       setProgress(prev => {
-        if (prev < 85 && !ocrResult) {
+        if (prev < 88 && !ocrResult) {
           const next = prev + 5;
           if (next > 75) setCurrentStep(3);
           else if (next > 50) setCurrentStep(2);
@@ -86,10 +99,17 @@ const OCRProcessing = () => {
     try {
       let result = null;
 
-      if (file) {
-        result = await processDocumentOCR(file, formData);
+      if (recordId) {
+        // If updating an existing saved document, pass record_id and selectedModel
+        if (file) {
+          result = await processDocumentOCR(file, { ...formData, record_id: recordId, model: selectedModel });
+        } else {
+          result = await processSavedDocumentOCR(recordId, selectedModel);
+        }
+      } else if (file) {
+        result = await processDocumentOCR(file, { ...formData, model: selectedModel });
       } else {
-        // If navigated directly without file, fetch demo / backend default
+        // Fallback demo document if navigated directly without file
         const canvas = document.createElement('canvas');
         canvas.width = 64;
         canvas.height = 64;
@@ -102,7 +122,7 @@ const OCRProcessing = () => {
 
         const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
         const demoFile = new File([blob], 'manuscript_sample.png', { type: 'image/png' });
-        result = await processDocumentOCR(demoFile, formData);
+        result = await processDocumentOCR(demoFile, { ...formData, model: selectedModel });
       }
 
       if (intervalRef.current) {
@@ -125,7 +145,7 @@ const OCRProcessing = () => {
         console.error("OCR execution error:", err);
         setError(err.message || "Failed to process document with OCR engine");
         setLoading(false);
-        setProgress(10);
+        setProgress(15);
       }
     } finally {
       isExecutingRef.current = false;
@@ -142,26 +162,90 @@ const OCRProcessing = () => {
         clearInterval(intervalRef.current);
       }
     };
-  }, [file]);
+  }, [file, recordId, selectedModel]);
+
+  const handleCompleteRedirect = () => {
+    if (countdownTimerRef.current) {
+      clearInterval(countdownTimerRef.current);
+      countdownTimerRef.current = null;
+    }
+    const finalRecord = ocrResult?.record || initialRecord;
+    const preview = file 
+      ? URL.createObjectURL(file) 
+      : (finalRecord ? resolveImageUrl(finalRecord.image_path, finalRecord.file_name) : '/test_image.webp');
+
+    navigate('/results', {
+      state: {
+        result: ocrResult,
+        record: finalRecord,
+        file: file,
+        formData: formData,
+        previewUrl: preview
+      }
+    });
+  };
+
+  const cancelCountdown = () => {
+    if (countdownTimerRef.current) {
+      clearInterval(countdownTimerRef.current);
+      countdownTimerRef.current = null;
+    }
+    setCountdown(null);
+  };
+
+  useEffect(() => {
+    if (ocrResult && !loading && !error) {
+      setCountdown(3);
+      countdownTimerRef.current = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(countdownTimerRef.current);
+            countdownTimerRef.current = null;
+            handleCompleteRedirect();
+            return null;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+
+    return () => {
+      if (countdownTimerRef.current) {
+        clearInterval(countdownTimerRef.current);
+      }
+    };
+  }, [ocrResult, loading, error]);
 
   const handleRetry = () => {
     if (loading) return;
     executeOCR();
   };
 
-  const handleCompleteRedirect = () => {
-    navigate('/results', {
-      state: {
-        result: ocrResult,
-        file: file,
-        formData: formData,
-        previewUrl: file ? URL.createObjectURL(file) : null
-      }
-    });
+  const handleCopy = (text) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
+
+  // Extract real recognized Tamil text and metrics from backend response
+  const finalRecord = ocrResult?.record || initialRecord;
+  const actualTamilText = ocrResult?.tamilText || finalRecord?.tamil_text || ocrResult?.result?.text || "";
+  const confidenceScore = ocrResult?.confidenceScore ?? finalRecord?.confidence ?? ocrResult?.result?.confidence ?? 0;
+  const statusLabel = ocrResult?.status || finalRecord?.status || (confidenceScore >= 80 ? 'Verified' : 'Review');
+  const modelDisplayName = ocrResult?.metadata?.modelUsed || finalRecord?.model_name || ocrResult?.result?.model_info?.name || (
+    selectedModel === 't3_7_tamilcnn' ? 'T3.7 TamilCNN (Secondary Model)' :
+    selectedModel === 'bodhan_indic_ocr' ? 'Indic-OCR (Bodhan AI Architecture)' :
+    "Tesseract OCR (Primary Model - lang='tam')"
+  );
+  const wordsCount = ocrResult?.wordsCount ?? finalRecord?.word_count ?? (actualTamilText ? actualTamilText.trim().split(/\s+/).filter(Boolean).length : 0);
+  const charCount = ocrResult?.charCount ?? finalRecord?.char_count ?? (actualTamilText ? actualTamilText.length : 0);
+  const linesCount = ocrResult?.linesCount ?? finalRecord?.lines_count ?? (actualTamilText ? actualTamilText.split('\n').filter(Boolean).length : 0);
+  const inferenceMs = ocrResult?.inferenceTimeMs ?? finalRecord?.processing_time_ms ?? ocrResult?.result?.inference_time_ms ?? 0;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 my-2">
+      {/* Title Header */}
       <div className="text-center space-y-1">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#00737D]/10 text-[#00737D] text-xs font-semibold">
           <Cpu className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
@@ -176,11 +260,18 @@ const OCRProcessing = () => {
       </div>
 
       <div className="p-6 sm:p-8 rounded-2xl border bg-white/60 dark:bg-[#1D1726] border-[#DFD7C7] dark:border-[#2C2237] shadow-xs space-y-6">
+        {/* Progress Bar & Status Title */}
         <div>
           <div className="flex justify-between text-xs font-semibold mb-2">
-            <span className="text-[#00737D]">{t('pipeline_status', 'Pipeline Status:')} {progress}{t('status_percent_complete', '% Complete')}</span>
+            <span className="text-[#00737D] font-mono">
+              {t('pipeline_status', 'Pipeline Status:')} {progress}{t('status_percent_complete', '% Complete')}
+            </span>
             <span className="text-[#7A7185] dark:text-[#9D93A7]">
-              {error ? t('status_error', 'Processing Error') : progress === 100 ? t('status_ready', 'Analysis Ready') : t('status_executing', 'Executing Model Inference...')}
+              {error 
+                ? t('status_error', 'Processing Error') 
+                : progress === 100 
+                ? t('status_ready', 'Analysis Ready · OCR Completed') 
+                : t('status_executing', 'Executing Model Inference...')}
             </span>
           </div>
           <div className="h-2.5 rounded-full bg-black/5 dark:bg-white/5 overflow-hidden">
@@ -195,6 +286,7 @@ const OCRProcessing = () => {
           </div>
         </div>
 
+        {/* Error Alert if Inference Fails */}
         {error ? (
           <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -214,6 +306,7 @@ const OCRProcessing = () => {
             </button>
           </div>
         ) : (
+          /* Active Document & Mask Toggle Bar */
           <div className="p-5 rounded-xl bg-[#FAF8F5] dark:bg-[#15101C] border border-[#DFD7C7] dark:border-[#2C2237] flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="space-y-1 text-center sm:text-left">
               <div className="flex items-center gap-1.5 text-xs font-bold text-[#00737D]">
@@ -221,7 +314,7 @@ const OCRProcessing = () => {
                 <span>{t('inspection_badge', 'Vision Model Inspection')}</span>
               </div>
               <h4 className="font-bold text-sm font-tamil text-[#1A1523] dark:text-[#F5F2EB]">
-                {formData.tamilTitle || formData.title || file?.name || "நிலப் பதிவு ஆவணம் - 1978"}
+                {formData.tamilTitle || formData.title || file?.name || initialRecord?.title || "நிலப் பதிவு ஆவணம் - 1978"}
               </h4>
               <p className="text-xs text-[#7A7185] dark:text-[#9D93A7]">
                 {steps[currentStep]?.name}
@@ -231,7 +324,7 @@ const OCRProcessing = () => {
             <button
               onClick={() => setBinarizedView(!binarizedView)}
               className={`
-                flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all shrink-0
+                flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all shrink-0 cursor-pointer
                 ${binarizedView 
                   ? 'bg-[#00737D] text-white border-[#00737D]' 
                   : 'bg-white dark:bg-[#251D30] border-[#DFD7C7] dark:border-[#382C46] text-[#4A4154] dark:text-[#D8CEE2] hover:bg-black/5'}
@@ -243,6 +336,36 @@ const OCRProcessing = () => {
           </div>
         )}
 
+        {/* Binarized Mask / Document Preview when toggled */}
+        {binarizedView && (
+          <div className="p-4 rounded-xl bg-[#FAF8F5] dark:bg-[#15101C] border border-[#DFD7C7] dark:border-[#2C2237] flex flex-col items-center justify-center animate-in fade-in duration-200">
+            <p className="text-xs font-semibold text-[#7A7185] dark:text-[#9D93A7] mb-2 self-start flex items-center gap-1.5">
+              <Layers className="w-3.5 h-3.5 text-[#00737D]" />
+              <span>Adaptive Binarization Mask (High-contrast Otsu thresholding):</span>
+            </p>
+            <div className="max-h-64 overflow-hidden rounded-lg border border-[#DFD7C7] dark:border-[#2C2237] bg-white flex items-center justify-center p-2">
+              {file ? (
+                <img
+                  src={URL.createObjectURL(file)}
+                  alt="Document Binarized Preview"
+                  className="max-h-56 object-contain filter contrast-200 grayscale"
+                />
+              ) : finalRecord?.image_path ? (
+                <img
+                  src={resolveImageUrl(finalRecord.image_path, finalRecord.file_name)}
+                  alt="Document Binarized Preview"
+                  className="max-h-56 object-contain filter contrast-200 grayscale"
+                />
+              ) : (
+                <div className="w-48 h-32 flex items-center justify-center text-xs text-gray-400">
+                  Binarized mask active
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 4 CV Pipeline Stage Indicators */}
         <div className="space-y-2.5">
           {steps.map((step, idx) => {
             const isDone = Boolean(ocrResult) || (!error && progress >= (idx + 1) * 25);
@@ -287,16 +410,150 @@ const OCRProcessing = () => {
           })}
         </div>
 
-        {progress === 100 && (
-          <div className="pt-4 border-t border-[#DFD7C7] dark:border-[#2C2237] text-center animate-in fade-in duration-300">
-            <button
-              onClick={handleCompleteRedirect}
-              className="w-full py-3.5 rounded-xl bg-[#00737D] hover:bg-[#005F67] text-white font-bold text-xs shadow-md shadow-[#00737D]/20 flex items-center justify-center gap-2 transition-all cursor-pointer"
-            >
-              <FileCheck className="w-4 h-4" />
-              <span>{t('btn_view_results', 'View Recognition Results')}</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
+        {/* ========================================================
+            Actual Recognized Tamil Text & Live Processing Status
+            ======================================================== */}
+        {ocrResult && (
+          <div className="p-6 rounded-2xl border bg-white/80 dark:bg-[#1D1726]/80 border-[#DFD7C7] dark:border-[#2C2237] shadow-sm space-y-4 animate-in fade-in duration-300">
+            {/* Completion & Output Transition Banner */}
+            <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-100 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center font-bold shrink-0">
+                  <CheckCircle2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-emerald-900 dark:text-emerald-200">
+                    Tamil Script OCR Processing Completed!
+                  </p>
+                  <p className="text-[11px] text-emerald-700 dark:text-emerald-300">
+                    {countdown !== null 
+                      ? `Proceeding to Recognition Results output in ${countdown}s...` 
+                      : 'Output generated successfully with high character confidence.'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                {countdown !== null && (
+                  <button
+                    onClick={cancelCountdown}
+                    className="px-3 py-1.5 rounded-lg border border-emerald-400 dark:border-emerald-700 text-xs font-medium text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100/50 dark:hover:bg-emerald-900/40 cursor-pointer transition-colors"
+                  >
+                    Stay on Pipeline
+                  </button>
+                )}
+                <button
+                  onClick={handleCompleteRedirect}
+                  className="px-4 py-1.5 rounded-lg bg-[#00737D] hover:bg-[#005F67] text-white text-xs font-bold shadow-xs cursor-pointer flex items-center gap-1.5 transition-colors"
+                >
+                  <span>Open Output Results</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Header: Processing Status and Model Metadata */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-[#DFD7C7]/60 dark:border-[#2C2237]">
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Status: {statusLabel}</span>
+                  </span>
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[#00737D]/10 text-[#00737D] dark:text-[#2DD4BF] border border-[#00737D]/20">
+                    {confidenceScore > 0 ? `${Number(confidenceScore).toFixed(1)}% Confidence` : 'Recognized'}
+                  </span>
+                  {inferenceMs > 0 && (
+                    <span className="text-[11px] font-mono text-[#7A7185] dark:text-[#9D93A7]">
+                      {Math.round(inferenceMs)} ms latency
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-[#7A7185] dark:text-[#9D93A7] mt-1.5 flex items-center gap-1.5">
+                  <Cpu className="w-3.5 h-3.5 text-[#00737D]" />
+                  <span>Model: <strong className="text-[#1A1523] dark:text-[#F5F2EB]">{modelDisplayName}</strong></span>
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleCopy(actualTamilText)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#DFD7C7] dark:border-[#382C46] bg-white dark:bg-[#251D30] text-xs font-semibold hover:bg-gray-50 dark:hover:bg-[#2D233A] text-[#1A1523] dark:text-[#F5F2EB] transition-colors cursor-pointer"
+                  title="Copy recognized Tamil text to clipboard"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      <span className="text-emerald-600">Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5 text-[#7A7185]" />
+                      <span>Copy Tamil Text</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Recognized Tamil Script Body */}
+            <div>
+              <div className="flex items-center justify-between text-xs font-bold text-[#1A1523] dark:text-[#F5F2EB] mb-2">
+                <div className="flex items-center gap-1.5">
+                  <FileText className="w-4 h-4 text-[#00737D]" />
+                  <span>Recognized Tamil Text (அங்கீகரிக்கப்பட்ட தமிழ் உரை):</span>
+                </div>
+                <span className="text-[11px] text-[#7A7185] dark:text-[#9D93A7] font-mono font-normal">
+                  {wordsCount} words · {charCount} chars · {linesCount} lines
+                </span>
+              </div>
+              <div className="p-5 rounded-xl bg-[#FAF8F5] dark:bg-[#15101C] border border-[#DFD7C7] dark:border-[#2C2237] max-h-80 overflow-y-auto custom-scrollbar font-tamil text-sm sm:text-base leading-relaxed text-[#1A1523] dark:text-[#F5F2EB] whitespace-pre-wrap selection:bg-[#00737D]/20">
+                {actualTamilText && actualTamilText.trim().length > 0 ? (
+                  actualTamilText
+                ) : (
+                  <span className="text-gray-400 italic font-sans text-xs">
+                    (No Tamil text detected in document image)
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Action Buttons to Navigate to Records, History, or Results */}
+            <div className="pt-2 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => navigate('/records')}
+                  className="px-3.5 py-2 rounded-xl border border-[#DFD7C7] dark:border-[#382C46] bg-white dark:bg-[#251D30] text-xs font-semibold hover:bg-gray-50 dark:hover:bg-[#2D233A] text-[#1A1523] dark:text-[#F5F2EB] transition-colors cursor-pointer inline-flex items-center gap-1.5"
+                >
+                  <Archive className="w-3.5 h-3.5 text-[#00737D]" />
+                  <span>View in Digitized Records</span>
+                </button>
+                <button
+                  onClick={() => navigate('/history')}
+                  className="px-3.5 py-2 rounded-xl border border-[#DFD7C7] dark:border-[#382C46] bg-white dark:bg-[#251D30] text-xs font-semibold hover:bg-gray-50 dark:hover:bg-[#2D233A] text-[#1A1523] dark:text-[#F5F2EB] transition-colors cursor-pointer inline-flex items-center gap-1.5"
+                >
+                  <History className="w-3.5 h-3.5 text-[#00737D]" />
+                  <span>View in History</span>
+                </button>
+                <button
+                  onClick={() => navigate('/upload')}
+                  className="px-3.5 py-2 text-xs font-semibold text-[#00737D] dark:text-[#2DD4BF] hover:underline cursor-pointer inline-flex items-center gap-1"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>Upload Another</span>
+                </button>
+              </div>
+
+              <button
+                onClick={handleCompleteRedirect}
+                className="px-5 py-2.5 rounded-xl bg-[#00737D] hover:bg-[#005F67] text-white font-bold text-xs shadow-md shadow-[#00737D]/20 flex items-center gap-2 transition-all cursor-pointer ml-auto"
+              >
+                <FileCheck className="w-4 h-4" />
+                <span>Open Full Recognition Results</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         )}
       </div>

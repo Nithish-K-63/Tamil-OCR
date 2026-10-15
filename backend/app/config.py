@@ -10,19 +10,9 @@ DB_PATH = BASE_DIR / "tamil_ocr.db"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 MODELS_DIR.mkdir(parents=True, exist_ok=True)
 
-# API Configuration
-PORT = int(os.environ.get("PORT", 8000))
-HOST = os.environ.get("HOST", "0.0.0.0")
-CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000,http://localhost:3001,http://localhost:8443,http://127.0.0.1:5173,http://127.0.0.1:3000,http://127.0.0.1:3001,http://127.0.0.1:8443").split(",")
-
-# Model Configuration
-HF_MODEL_REPO = os.environ.get("HF_MODEL_REPO", "dhruv10050/t3-7-indic-recognition")
-DEVICE = os.environ.get("DEVICE", "cpu")
-CONFIDENCE_THRESHOLD = float(os.environ.get("CONFIDENCE_THRESHOLD", 80.0))
-
 # Environment File Loader (lightweight without external dotenv dependency)
 def _load_env_files():
-    for env_candidate in [BASE_DIR / ".env", BASE_DIR.parent / ".env"]:
+    for env_candidate in [BASE_DIR / ".env", BASE_DIR.parent / ".env", BASE_DIR.parent / "frontend" / ".env"]:
         if env_candidate.is_file():
             try:
                 with open(env_candidate, "r", encoding="utf-8") as f:
@@ -41,12 +31,36 @@ def _load_env_files():
 
 _load_env_files()
 
+# API Configuration
+PORT = int(os.environ.get("PORT", 8000))
+HOST = os.environ.get("HOST", "0.0.0.0")
+raw_cors = os.environ.get("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000,http://localhost:3001,http://localhost:8443,http://127.0.0.1:5173,http://127.0.0.1:3000,http://127.0.0.1:3001,http://127.0.0.1:8443")
+CORS_ORIGINS = [orig.strip() for orig in raw_cors.split(",") if orig.strip()]
+
+# Model Configuration
+HF_MODEL_REPO = os.environ.get("HF_MODEL_REPO", "dhruv10050/t3-7-indic-recognition")
+DEVICE = os.environ.get("DEVICE", "cpu")
+CONFIDENCE_THRESHOLD = float(os.environ.get("CONFIDENCE_THRESHOLD", 80.0))
+
+# Bodhan Indic-OCR Cloud Service Configuration (Backend-Only Secure Credentials)
+BODHAN_API_KEY = os.environ.get("BODHAN_API_KEY", "").strip()
+BODHAN_API_ENDPOINT = os.environ.get("BODHAN_API_ENDPOINT", "https://api.bodhan.ai/v1").strip().rstrip("/")
+BODHAN_MODEL = os.environ.get("BODHAN_MODEL", "indic-ocr").strip()
+
+# AI Assistant & LLM Configuration (Backend-Only Secure Credentials)
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip() or os.environ.get("GOOGLE_API_KEY", "").strip()
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash").strip()
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "").strip()
+OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini").strip()
+OPENAI_BASE_URL = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1").strip().rstrip("/")
+
+
 # MongoDB Atlas Configuration
 import urllib.parse
 
-MONGODB_DB_NAME = os.environ.get("MONGODB_DB_NAME", "tamil_ocr")
-MONGODB_USER = os.environ.get("MONGODB_USER") or os.environ.get("DB_USERNAME") or os.environ.get("USERNAME", "Nithish")
-MONGODB_PASSWORD = os.environ.get("MONGODB_PASSWORD", "nziGOtJuiu4sz1dB")
+MONGODB_DB_NAME = os.environ.get("MONGODB_DB_NAME", "tamilocrgov")
+MONGODB_USER = os.environ.get("MONGODB_USER") or os.environ.get("DB_USERNAME") or "nithishk63741_db_user"
+MONGODB_PASSWORD = os.environ.get("MONGODB_PASSWORD", "")
 MONGODB_CLUSTER = os.environ.get("MONGODB_CLUSTER", "cluster0.itpmyr3.mongodb.net")
 
 raw_uri = os.environ.get("MONGODB_URI", "")

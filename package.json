@@ -5,8 +5,9 @@
   "version": "2.4.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "backend": "python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --app-dir backend",
+    "dev": "node scripts/dev.js",
+    "frontend": "vite",
+    "backend": "node scripts/run-backend.js",
     "build": "vite build",
     "preview": "vite preview",
     "format": "oxfmt"

@@ -15,7 +15,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from PIL import Image
 from pathlib import Path
-from typing import Dict, Any, List, Tuple, Optional
+from typing import Dict, Any, List, Tuple, Optional, Union
 import logging
 
 from app.models.tamil_charset import TAMIL_156_CLASSES, get_char, get_index
@@ -207,7 +207,12 @@ class IndicOCREngine:
             except Exception as e:
                 logger.warning("Warm-start transfer issue: %s", e)
 
-    def recognize_image(self, image_bytes: bytes, filename: str = "document.jpg") -> Dict[str, Any]:
+    def recognize_image(
+        self, 
+        image_bytes: Union[bytes, str, np.ndarray], 
+        filename: str = "document.jpg",
+        **kwargs
+    ) -> Dict[str, Any]:
         """
         End-to-end inference:
         1. Layout parsing via IndicDocLayout (detects blocks and reading order).
@@ -215,6 +220,14 @@ class IndicOCREngine:
         3. Reconstructs structured reading-ordered Tamil text and per-block JSON.
         """
         start_time = time.perf_counter()
+
+        if isinstance(image_bytes, str):
+            with open(image_bytes, "rb") as f:
+                image_bytes = f.read()
+        elif isinstance(image_bytes, np.ndarray):
+            success, enc = cv2.imencode(".png", image_bytes)
+            if success:
+                image_bytes = enc.tobytes()
 
         img = ImagePreprocessor.load_image(image_bytes)
         if img is None:
@@ -343,3 +356,9 @@ def get_indic_ocr_engine() -> IndicOCREngine:
     if _indic_ocr_singleton is None:
         _indic_ocr_singleton = IndicOCREngine(device=DEVICE)
     return _indic_ocr_singleton
+
+def reload_indic_ocr_engine() -> IndicOCREngine:
+    global _indic_ocr_singleton
+    _indic_ocr_singleton = None
+    return get_indic_ocr_engine()
+

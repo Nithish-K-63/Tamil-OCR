@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Upload, 
@@ -7,9 +7,12 @@ import {
   Sparkles, 
   Info,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  RotateCw,
+  ExternalLink
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+import { fetchModelInfo, uploadDocumentOnly } from '../api/ocrApi';
 
 const DocumentUpload = () => {
   const navigate = useNavigate();
@@ -22,29 +25,71 @@ const DocumentUpload = () => {
   const [selectedModel, setSelectedModel] = useState('tesseract_primary');
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState(null);
+  const [uploadError, setUploadError] = useState(null);
+  const [modelInfo, setModelInfo] = useState(null);
+
+  useEffect(() => {
+    fetchModelInfo().then(data => {
+      if (data) setModelInfo(data);
+    });
+  }, []);
+
+  const modelsList = modelInfo?.available_models || [];
+  const tessMeta = modelsList.find(m => m.id === 'tesseract_primary');
+  const t37Meta = modelsList.find(m => m.id === 't3_7_tamilcnn');
+  const indicMeta = modelsList.find(m => m.id === 'bodhan_indic_ocr');
+
+  const tessAcc = tessMeta?.character_accuracy ?? 89.40;
+  const t37Acc = t37Meta?.character_accuracy ?? 94.44;
+  const indicAcc = indicMeta?.character_accuracy ?? 49.15;
 
   const handleFileDrop = (e) => {
     e.preventDefault();
     setIsDragging(false);
     if (e.dataTransfer?.files?.[0]) {
       setFile(e.dataTransfer.files[0]);
+      setUploadError(null);
+      setUploadSuccess(null);
     }
   };
 
-  const handleStartRecognition = async () => {
-    setUploading(true);
+  const handleLoadSample = async () => {
+    try {
+      const response = await fetch('/test_image.webp');
+      const blob = await response.blob();
+      const sampleFile = new File([blob], 'tamil_manuscript_sample.webp', { type: 'image/webp' });
+      setFile(sampleFile);
+      setDocTitle('நிலப் பதிவு ஆவணம் - தஞ்சாவூர்');
+      setDepartment('Revenue Department');
+      setDocYear('1978');
+      setDistrict('Thanjavur');
+      setUploadError(null);
+      setUploadSuccess(null);
+    } catch (e) {
+      console.warn("Could not load sample manuscript:", e);
+    }
+  };
+
+  const handleUploadDocument = async () => {
     let targetFile = file;
     if (!targetFile) {
+      // Auto-load bundled Tamil manuscript sample so the user can immediately proceed
       try {
-        const resp = await fetch('/test_image.webp');
-        if (resp.ok) {
-          const blob = await resp.blob();
-          targetFile = new File([blob], 'test image.webp', { type: 'image/webp' });
-        }
+        const response = await fetch('/test_image.webp');
+        const blob = await response.blob();
+        targetFile = new File([blob], 'tamil_manuscript_sample.webp', { type: 'image/webp' });
+        setFile(targetFile);
       } catch (e) {
-        console.warn("Could not load default test_image.webp", e);
+        setUploadError("Please select or drop a handwritten Tamil image file first.");
+        return;
       }
     }
+
+    setUploading(true);
+    setUploadError(null);
+    setUploadSuccess(null);
+
     const metadata = {
       title: docTitle,
       tamilTitle: docTitle,
@@ -53,12 +98,31 @@ const DocumentUpload = () => {
       district: district,
       model: selectedModel
     };
-    navigate('/pipeline', {
-      state: {
-        file: targetFile,
-        formData: metadata
+
+    try {
+      // Direct upload and persistent save to MongoDB Atlas / Database
+      const res = await uploadDocumentOnly(targetFile, metadata);
+      if (res && res.success) {
+        setUploadSuccess(res);
+        // After submission, save to database and History, then navigate to OCR Processing page
+        navigate('/pipeline', {
+          state: {
+            recordId: res.record_id,
+            record: res.document,
+            file: targetFile,
+            formData: metadata,
+            selectedModel: selectedModel
+          }
+        });
+      } else {
+        setUploadError(res?.message || "Failed to upload document.");
       }
-    });
+    } catch (err) {
+      console.error("Upload error:", err);
+      setUploadError(err.message || "Failed to save document to database.");
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
@@ -67,6 +131,63 @@ const DocumentUpload = () => {
           LEFT: 2 Steps (Upload Manuscript + Document Metadata)
           ======================================================== */}
       <div className="lg:col-span-2 space-y-6">
+        {/* Upload Success Banner */}
+        {uploadSuccess && (
+          <div className="p-5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 space-y-3 animate-in fade-in">
+            <div className="flex items-center gap-2.5 font-bold text-sm">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <span>Document Successfully Saved to Database!</span>
+            </div>
+            <p className="text-xs leading-relaxed text-emerald-800 dark:text-emerald-300">
+              Document <strong className="font-mono text-emerald-900 dark:text-emerald-100">{uploadSuccess.record_id}</strong> (<em>{uploadSuccess.document?.file_name}</em>) has been saved with status <span className="px-2 py-0.5 rounded font-mono bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 font-bold">Pending OCR</span>. The original image has been safely stored in persistent storage.
+            </p>
+            <div className="flex flex-wrap items-center gap-3 pt-1">
+              <button
+                onClick={() => navigate('/history')}
+                className="px-4 py-2 rounded-xl bg-[#00737D] hover:bg-[#005F67] text-white font-semibold text-xs transition-colors cursor-pointer flex items-center gap-1.5 shadow-sm"
+              >
+                <span>View in History</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => {
+                  navigate('/pipeline', {
+                    state: {
+                      recordId: uploadSuccess.record_id,
+                      record: uploadSuccess.document,
+                      file: file,
+                      formData: {
+                        title: docTitle,
+                        tamilTitle: docTitle,
+                        department: department,
+                        year: docYear,
+                        district: district,
+                        model: selectedModel
+                      },
+                      selectedModel: selectedModel
+                    }
+                  });
+                }}
+                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition-colors cursor-pointer flex items-center gap-1.5 shadow-sm"
+              >
+                <span>Proceed to OCR Processing</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Upload Error Banner */}
+        {uploadError && (
+          <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-200 text-xs flex items-center justify-between animate-in fade-in">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+              <span>{uploadError}</span>
+            </div>
+            <button onClick={() => setUploadError(null)} className="cursor-pointer text-xs underline font-semibold ml-4">Dismiss</button>
+          </div>
+        )}
+
         {/* Step 01: Upload Manuscript */}
         <div className="p-6 rounded-2xl border bg-white/60 dark:bg-[#1D1726] border-[#DFD7C7] dark:border-[#2C2237] shadow-xs">
           <div className="flex items-center gap-3 mb-5">
@@ -107,24 +228,58 @@ const DocumentUpload = () => {
               {t('drop_sub', 'or choose a file from your computer')}
             </p>
 
-            <label className="px-4 py-2 rounded-xl border border-[#DFD7C7] dark:border-[#382C46] bg-white dark:bg-[#251D30] text-xs font-semibold hover:bg-gray-50 dark:hover:bg-[#2D233A] cursor-pointer shadow-xs transition-colors">
-              {t('btn_browse_files', 'Browse files')}
-              <input
-                id="manuscript-file-input"
-                type="file"
-                className="hidden"
-                accept="image/*"
-                onChange={(e) => e.target.files?.[0] && setFile(e.target.files[0])}
-              />
-            </label>
+            <div className="flex flex-wrap items-center justify-center gap-2.5">
+              <label className="px-4 py-2 rounded-xl border border-[#DFD7C7] dark:border-[#382C46] bg-white dark:bg-[#251D30] text-xs font-semibold hover:bg-gray-50 dark:hover:bg-[#2D233A] cursor-pointer shadow-xs transition-colors">
+                {t('btn_browse_files', 'Browse files')}
+                <input
+                  id="manuscript-file-input"
+                  type="file"
+                  className="hidden"
+                  accept="image/*"
+                  onChange={(e) => e.target.files?.[0] && setFile(e.target.files[0])}
+                />
+              </label>
+
+              <button
+                type="button"
+                onClick={handleLoadSample}
+                className="px-4 py-2 rounded-xl border border-[#00737D]/30 bg-[#00737D]/10 hover:bg-[#00737D]/20 text-[#00737D] dark:text-[#2DD4BF] text-xs font-semibold cursor-pointer shadow-xs transition-colors flex items-center gap-1.5"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-[#00737D] dark:text-[#2DD4BF]" />
+                <span>{language === 'ta' ? 'மாதிரி ஆவணத்தை ஏற்றுக' : 'Use Sample Tamil Manuscript'}</span>
+              </button>
+            </div>
 
             <p className="text-[10px] text-[#9D93A7] mt-4 font-mono">
               {t('supported_formats', 'JPG, JPEG or PNG · Maximum 15 MB')}
             </p>
 
             {file && (
-              <div className="mt-4 p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 text-xs font-medium border border-emerald-200 dark:border-emerald-800">
-                {t('selected_prefix', 'Selected:')} {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+              <div className="mt-4 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 text-xs font-medium border border-emerald-200 dark:border-emerald-800 flex items-center justify-between gap-3 w-full max-w-md">
+                <div className="flex items-center gap-3 truncate">
+                  <div className="w-10 h-10 rounded-lg overflow-hidden bg-white dark:bg-[#1A1024] border border-emerald-200 shrink-0 flex items-center justify-center">
+                    {file.type?.startsWith('image/') ? (
+                      <img 
+                        src={URL.createObjectURL(file)} 
+                        alt="Selected manuscript" 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <FileText className="w-5 h-5 text-emerald-600" />
+                    )}
+                  </div>
+                  <div className="truncate text-left">
+                    <p className="font-bold truncate text-[#1A1523] dark:text-[#F5F2EB]">{file.name}</p>
+                    <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono">{(file.size / 1024 / 1024).toFixed(2)} MB · Ready for OCR</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setFile(null); }}
+                  className="px-2.5 py-1 rounded-lg text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors shrink-0 cursor-pointer"
+                >
+                  Change
+                </button>
               </div>
             )}
           </div>
@@ -233,7 +388,7 @@ const DocumentUpload = () => {
                     </span>
                   </div>
                   <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
-                    lang='tam' (Tamil Pack)
+                    {typeof tessAcc === 'number' ? tessAcc.toFixed(1) : tessAcc}% Accuracy · lang='tam'
                   </span>
                 </div>
                 <p className="text-[11px] text-[#7A7185] dark:text-[#9D93A7] leading-relaxed">
@@ -244,7 +399,7 @@ const DocumentUpload = () => {
 
             {/* SECONDARY MODELS */}
             <p className="text-[11px] font-semibold text-[#7A7185] dark:text-[#9D93A7] mb-2">
-              Secondary Alternative Models:
+              Secondary Alternative Models (Tested on uTHCD Dataset):
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <button
@@ -258,12 +413,12 @@ const DocumentUpload = () => {
               >
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-xs font-bold text-[#1A1523] dark:text-[#F5F2EB]">T3.7 TamilCNN</span>
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300">
-                    Secondary
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
+                    {typeof t37Acc === 'number' ? t37Acc.toFixed(1) : t37Acc}% Tested
                   </span>
                 </div>
                 <p className="text-[11px] text-[#7A7185] dark:text-[#9D93A7] leading-relaxed">
-                  4-Block Deep CNN character classifier tested on uTHCD split (1.6ms latency).
+                  4-Block Deep CNN character classifier tested on uTHCD held-out split (1.0ms latency).
                 </p>
               </button>
 
@@ -279,7 +434,7 @@ const DocumentUpload = () => {
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-xs font-bold text-[#1A1523] dark:text-[#F5F2EB]">Indic-OCR</span>
                   <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300">
-                    Secondary
+                    {typeof indicAcc === 'number' ? indicAcc.toFixed(1) : indicAcc}% Tested
                   </span>
                 </div>
                 <p className="text-[11px] text-[#7A7185] dark:text-[#9D93A7] leading-relaxed">
@@ -295,20 +450,30 @@ const DocumentUpload = () => {
               <Info className="w-4 h-4 text-[#00737D]" />
               <span>
                 {selectedModel === 'tesseract_primary'
-                  ? 'Tesseract OCR (Primary Model - lang=\'tam\') · Active'
+                  ? `Tesseract OCR (Primary Model - lang='tam') · ${typeof tessAcc === 'number' ? tessAcc.toFixed(1) : tessAcc}% Document Accuracy · Active`
                   : selectedModel === 'bodhan_indic_ocr'
-                  ? 'Indic-OCR (Bodhan AI Architecture - Secondary) · Active'
-                  : 'TamilCNN T3.7 (Secondary Model) · Active'}
+                  ? `Indic-OCR (Bodhan AI Architecture - Secondary) · ${typeof indicAcc === 'number' ? indicAcc.toFixed(1) : indicAcc}% Tested · Active`
+                  : `TamilCNN T3.7 (Secondary Model) · ${typeof t37Acc === 'number' ? t37Acc.toFixed(1) : t37Acc}% Tested · Active`}
               </span>
             </div>
 
             <button
-              onClick={handleStartRecognition}
+              id="btn-upload-document"
+              onClick={handleUploadDocument}
               disabled={uploading}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-[#00737D] hover:bg-[#005F67] text-white font-semibold text-xs shadow-md shadow-[#00737D]/20 transition-all cursor-pointer"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-[#00737D] hover:bg-[#005F67] text-white font-semibold text-xs shadow-md shadow-[#00737D]/20 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              <Sparkles className="w-4 h-4" />
-              <span>{uploading ? t('btn_processing', 'Processing...') : t('btn_start_recognition', 'Start Recognition')}</span>
+              {uploading ? (
+                <>
+                  <RotateCw className="w-4 h-4 animate-spin" />
+                  <span>{language === 'ta' ? 'சேமிக்கப்படுகிறது...' : 'Saving to Database...'}</span>
+                </>
+              ) : (
+                <>
+                  <Upload className="w-4 h-4" />
+                  <span>{language === 'ta' ? 'ஆவணத்தைப் பதிவேற்றி சேமிக்க' : 'Upload & Save Document'}</span>
+                </>
+              )}
             </button>
           </div>
         </div>

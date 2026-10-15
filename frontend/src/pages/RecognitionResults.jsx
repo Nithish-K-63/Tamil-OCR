@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { 
   ChevronLeft, 
@@ -7,9 +7,12 @@ import {
   Copy, 
   Check, 
   Download, 
-  Save 
+  Save,
+  RotateCw,
+  Cpu
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+import { updateRecord, resolveImageUrl } from '../api/ocrApi';
 
 const RecognitionResults = () => {
   const navigate = useNavigate();
@@ -17,8 +20,8 @@ const RecognitionResults = () => {
   const { t } = useLanguage();
 
   const result = location.state?.result;
+  const record = location.state?.record;
   const file = location.state?.file;
-  const previewUrl = location.state?.previewUrl;
   const formData = location.state?.formData || {};
 
   const defaultText = `தமிழ்நாடு அரசு
@@ -35,20 +38,50 @@ const RecognitionResults = () => {
 வட்டாட்சியர்
 கும்பகோணம்`;
 
+  const textFromApi = result?.tamilText || result?.result?.text || record?.tamil_text;
+  const initialText = (textFromApi && typeof textFromApi === 'string' && textFromApi.trim().length > 0) 
+    ? textFromApi 
+    : defaultText;
+
+  const docTitle = record?.title || result?.metadata?.title || formData?.title || formData?.tamilTitle || "நிலப் பதிவு ஆவணம் - 1978";
+  const docId = record?.id || result?.recordId || result?.record?.id || "TNOCR-0248";
+  const department = record?.department || result?.metadata?.department || formData?.department || "Revenue Department";
+  const district = record?.district || result?.metadata?.district || formData?.district || "Thanjavur";
+  const modelUsed = result?.metadata?.modelUsed || record?.model_name || "Tesseract OCR (Primary Model - lang='tam')";
+
+  const rawConf = result?.confidenceScore ?? result?.result?.confidence ?? record?.confidenceRaw ?? record?.confidence ?? 95;
+  const confidence = Math.round(typeof rawConf === 'number' ? rawConf : parseFloat(rawConf) || 95);
+
+  const rawPreview = location.state?.previewUrl || 
+    (file ? URL.createObjectURL(file) : null) || 
+    (record ? resolveImageUrl(record.image_path, record.file_name) : null) || 
+    '/test_image.webp';
+  const [previewUrl, setPreviewUrl] = useState(rawPreview);
+
   const [isEditing, setIsEditing] = useState(false);
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [tamilText, setTamilText] = useState(result?.tamilText || defaultText);
+  const [saving, setSaving] = useState(false);
+  const [tamilText, setTamilText] = useState(initialText);
 
-  const docTitle = result?.metadata?.title || formData?.title || formData?.tamilTitle || "நிலப் பதிவு ஆவணம் - 1978";
-  const docId = result?.recordId || "TNOCR-0248";
-  const department = result?.metadata?.department || formData?.department || "Revenue Department";
-  const district = result?.metadata?.district || formData?.district || "Thanjavur";
-  const confidence = Math.round(result?.confidenceScore || 95);
+  useEffect(() => {
+    const textFromApi = result?.tamilText || result?.result?.text || record?.tamil_text;
+    if (textFromApi && typeof textFromApi === 'string' && textFromApi.trim().length > 0) {
+      setTamilText(textFromApi);
+    }
+  }, [result, record]);
 
-  const wordsCount = result?.wordsCount || tamilText.trim().split(/\s+/).filter(Boolean).length;
-  const charsCount = result?.charCount || tamilText.length;
-  const fileName = file?.name || result?.fileName || "land_record_1978.jpg";
+  useEffect(() => {
+    const nextPreview = location.state?.previewUrl || 
+      (file ? URL.createObjectURL(file) : null) || 
+      (record ? resolveImageUrl(record.image_path, record.file_name) : null) || 
+      '/test_image.webp';
+    setPreviewUrl(nextPreview);
+  }, [location.state, file, record]);
+
+  const wordsCount = tamilText.trim().split(/\s+/).filter(Boolean).length;
+  const charsCount = tamilText.length;
+  const fileName = file?.name || record?.file_name || result?.fileName || "land_record_1978.jpg";
 
   const handleCopy = () => {
     navigator.clipboard.writeText(tamilText);
@@ -56,10 +89,20 @@ const RecognitionResults = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleSave = () => {
-    setIsEditing(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      if (docId && !docId.startsWith("demo")) {
+        await updateRecord(docId, { tamil_text: tamilText });
+      }
+      setIsEditing(false);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      console.error("Failed to save updated text:", err);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -81,8 +124,12 @@ const RecognitionResults = () => {
             <h2 className="text-2xl sm:text-3xl font-serif font-bold text-[#1A1523] dark:text-[#F5F2EB] leading-normal font-tamil">
               {docTitle}
             </h2>
-            <p className="text-xs text-[#7A7185] dark:text-[#9D93A7] mt-1 font-english">
-              {docId} · {department} · {district}
+            <p className="text-xs text-[#7A7185] dark:text-[#9D93A7] mt-1 font-english flex flex-wrap items-center gap-2">
+              <span>{docId} · {department} · {district}</span>
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#00737D]/10 text-[#00737D] dark:text-[#2DD4BF] font-semibold text-[11px] border border-[#00737D]/20">
+                <Cpu className="w-3 h-3" />
+                <span>{modelUsed}</span>
+              </span>
             </p>
           </div>
 

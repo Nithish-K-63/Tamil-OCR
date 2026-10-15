@@ -6,6 +6,7 @@ import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Sidebar from './components/Sidebar';
 import Navbar from './components/Navbar';
+import AIAssistant from './components/AIAssistant';
 
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -85,6 +86,9 @@ const App = () => {
                   <Route path="/settings" element={<MainLayout><Settings /></MainLayout>} />
                 </Route>
               </Routes>
+
+              {/* Floating AI Assistant at bottom-right corner of every page */}
+              <AIAssistant />
             </BrowserRouter>
           </AuthProvider>
         </LanguageProvider>

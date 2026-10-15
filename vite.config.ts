@@ -3,9 +3,9 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'node:path'
 import http from 'node:http'
-import { spawn, type ChildProcess } from 'node:child_process'
+import { spawn, execSync, type ChildProcess } from 'node:child_process'
 
-import siteConfiguration from './.figma/make/site.json'
+import siteConfiguration from './.figma/make/site.json' with { type: 'json' }
 
 
 // Vite config — https://vitejs.dev/config/
@@ -30,7 +30,7 @@ export default defineConfig(({ mode }) => {
     ],
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, './src'),
+        '@': path.resolve(import.meta.dirname, './src'),
       },
     },
     server: {
@@ -41,8 +41,8 @@ export default defineConfig(({ mode }) => {
         '/api': {
           target: 'http://127.0.0.1:8000',
           changeOrigin: true,
-          timeout: 30000,
-          proxyTimeout: 30000,
+          timeout: 600000,
+          proxyTimeout: 600000,
         },
       },
       watch: {
@@ -73,6 +73,11 @@ function backendManagerPlugin(): Plugin {
   return {
     name: 'backend-manager',
     configureServer(server) {
+      // If dev.js runner is active, it manages the backend lifecycle
+      if (process.env.TAMILOCR_MANAGED_BY_DEV_RUNNER === '1') {
+        return
+      }
+
       const checkAndStartBackend = () => {
         const req = http.get('http://127.0.0.1:8000/api/health', { timeout: 3000 }, (res) => {
           if (res.statusCode === 200) {
@@ -86,11 +91,11 @@ function backendManagerPlugin(): Plugin {
 
         req.on('error', () => {
           console.log('[TamilOCR] Backend not detected on port 8000. Launching Uvicorn inference service...')
-          const backendDir = path.resolve(__dirname, 'backend')
-          backendProcess = spawn('python', ['-m', 'uvicorn', 'app.main:app', '--host', '127.0.0.1', '--port', '8000'], {
-            cwd: backendDir,
+          const runnerScript = path.resolve(import.meta.dirname, 'scripts', 'run-backend.js')
+          backendProcess = spawn(process.execPath, [runnerScript], {
+            cwd: import.meta.dirname,
             stdio: 'inherit',
-            shell: process.platform === 'win32',
+            shell: false,
           })
 
           backendProcess.on('error', (err) => {
@@ -102,8 +107,14 @@ function backendManagerPlugin(): Plugin {
       checkAndStartBackend()
 
       const cleanup = () => {
-        if (backendProcess && !backendProcess.killed) {
-          backendProcess.kill()
+        if (backendProcess && backendProcess.pid) {
+          try {
+            if (process.platform === 'win32') {
+              execSync(`taskkill /pid ${backendProcess.pid} /T /F`, { stdio: 'ignore' })
+            } else {
+              backendProcess.kill('SIGTERM')
+            }
+          } catch {}
           backendProcess = null
         }
       }

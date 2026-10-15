@@ -159,7 +159,7 @@ export const translations = {
     stage_2_name: "Layout & Text Line Segmentation",
     stage_2_desc: "Extracting handwritten Tamil text lines and character contour regions",
     stage_3_name: "Deep TamilCNN Script Recognition",
-    stage_3_desc: "156-class character classification with 97.3% Top-1 validation accuracy",
+    stage_3_desc: "156-class character classification with dynamic empirical validation",
     stage_4_name: "Unicode Reconstruction & Post-Processing",
     stage_4_desc: "Canonical NFC Tamil Unicode assembly and word boundary alignment",
 
@@ -362,8 +362,27 @@ export const translations = {
     auth_forgot_title: "Reset Password",
     auth_forgot_sub: "Enter your registered email to receive recovery instructions",
     btn_send_reset: "Send Reset Link",
-    back_to_login: "Back to sign in"
+    back_to_login: "Back to sign in",
+
+    // AI Assistant
+    ai_assistant_title: "TamilOCR AI Assistant",
+    ai_assistant_subtitle: "Archival Document Intelligence",
+    ai_assistant_badge: "Online",
+    ai_assistant_placeholder: "Ask about TamilOCR, documents, models, pipelines...",
+    ai_assistant_send: "Send",
+    ai_assistant_typing: "AI Assistant is analyzing...",
+    ai_assistant_clear: "Clear Chat",
+    ai_assistant_close: "Close Assistant",
+    ai_assistant_minimize: "Minimize",
+    ai_assistant_copied: "Copied to clipboard",
+    ai_assistant_disclaimer: "Powered by TamilOCR Archival AI. Verify critical historical data.",
+    ai_assistant_welcome_title: "How can I help you today?",
+    ai_assistant_welcome_desc: "Ask me anything about uploading handwritten Tamil records, understanding the TamilCNN T3.7 model, preprocessing pipelines, or exporting data.",
+    ai_assistant_fab_tooltip: "Ask TamilOCR AI Assistant",
+    ai_assistant_retry: "Retry",
+    ai_assistant_error: "Unable to reach AI Assistant. Please check server or retry."
   },
+
 
   TA: {
     // Brand
@@ -520,7 +539,7 @@ export const translations = {
     stage_2_name: "வடிவமைப்பு & வரிகள் பிரித்தல்",
     stage_2_desc: "கையெழுத்து தமிழ் வரிகள் மற்றும் எழுத்து விளிம்பு பகுதிகளை பிரித்தெடுத்தல்",
     stage_3_name: "ஆழ கற்றல் TamilCNN எழுத்துணர்தல்",
-    stage_3_desc: "97.3% துல்லியத்துடன் 156-வகுப்பு எழுத்து வகைப்பாடு",
+    stage_3_desc: "நேரடி துல்லியத்துடன் 156-வகுப்பு எழுத்து வகைப்பாடு",
     stage_4_name: "யூனிகோட் மறுசீரமைப்பு & பிந்தைய செயலாக்கம்",
     stage_4_desc: "நியமன NFC தமிழ் யூனிகோட் ஒருங்கிணைப்பு மற்றும் சொல் சீரமைப்பு",
 
@@ -720,6 +739,25 @@ export const translations = {
     auth_forgot_title: "கடவுச்சொல்லை மீட்டமை",
     auth_forgot_sub: "கடவுச்சொல் மீட்பு வழிமுறைகளைப் பெற மின்னஞ்சலை உள்ளிடவும்",
     btn_send_reset: "மீட்டமைப்பு இணைப்பை அனுப்புக",
-    back_to_login: "மீண்டும் உள்நுழைவிற்குச் செல்லவும்"
+    back_to_login: "மீண்டும் உள்நுழைவிற்குச் செல்லவும்",
+
+    // AI Assistant
+    ai_assistant_title: "தமிழ்OCR AI உதவியாளர்",
+    ai_assistant_subtitle: "காப்பக ஆவண நுண்ணறிவு",
+    ai_assistant_badge: "இணைப்பில்",
+    ai_assistant_placeholder: "தமிழ்OCR, ஆவணங்கள், மாதிரிகள் பற்றி கேளுங்கள்...",
+    ai_assistant_send: "அனுப்பு",
+    ai_assistant_typing: "உதவியாளர் பதிலளிக்கிறார்...",
+    ai_assistant_clear: "அரட்டையை அழி",
+    ai_assistant_close: "உதவியாளரை மூடு",
+    ai_assistant_minimize: "குறைக்கவும்",
+    ai_assistant_copied: "நகலெடுக்கப்பட்டது",
+    ai_assistant_disclaimer: "தமிழ்OCR காப்பக AI மூலம் இயக்கப்படுகிறது.",
+    ai_assistant_welcome_title: "இன்று உங்களுக்கு எவ்வாறு உதவ வேண்டும்?",
+    ai_assistant_welcome_desc: "கையெழுத்து தமிழ் ஆவணங்களைப் பதிவேற்றுதல், TamilCNN மாதிரி, படச் சீரமைப்பு, அல்லது தரவு ஏற்றுமதி பற்றி எதையும் கேட்கலாம்.",
+    ai_assistant_fab_tooltip: "தமிழ்OCR AI உதவியாளரிடம் கேளுங்கள்",
+    ai_assistant_retry: "மீண்டும் முயற்சி செய்",
+    ai_assistant_error: "AI உதவியாளரை அணுக முடியவில்லை. சர்வரை சரிபார்க்கவும்."
   }
 };
+
