@@ -23,6 +23,15 @@ class ImagePreprocessor:
         if img is None:
             pil_img = Image.open(io.BytesIO(file_bytes)).convert("RGB")
             img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
+
+        # Cap max dimension to 1600px to maintain crisp OCR accuracy while preventing cloud OOM
+        max_dim = max(img.shape[:2])
+        if max_dim > 1600:
+            scale = 1600.0 / max_dim
+            new_w = int(img.shape[1] * scale)
+            new_h = int(img.shape[0] * scale)
+            img = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_AREA)
+
         return img
 
     @classmethod

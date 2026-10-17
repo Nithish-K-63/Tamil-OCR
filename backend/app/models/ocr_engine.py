@@ -143,25 +143,28 @@ class TamilOCREngine:
             confidence_pct = round(conf.item() * 100.0, 2)
             return char, confidence_pct, pred_idx.item()
 
-    def predict_batch_patches(self, patches: List[np.ndarray]) -> List[Tuple[str, float, int]]:
-        """Batch classify multiple 64x64 character patches."""
+    def predict_batch_patches(self, patches: List[np.ndarray], batch_size: int = 32) -> List[Tuple[str, float, int]]:
+        """Batch classify multiple 64x64 character patches in memory-safe chunks."""
         if not patches:
             return []
 
-        tensors = [torch.from_numpy(p).unsqueeze(0).unsqueeze(0) for p in patches]
-        batch = torch.cat(tensors, dim=0).to(self.device)
-
+        results = []
         with torch.no_grad():
-            logits = self.model(batch)
-            probs = F.softmax(logits, dim=1)
-            confs, indices = torch.max(probs, dim=1)
+            for i in range(0, len(patches), batch_size):
+                chunk = patches[i:i + batch_size]
+                tensors = [torch.from_numpy(p).unsqueeze(0).unsqueeze(0) for p in chunk]
+                batch = torch.cat(tensors, dim=0).to(self.device)
+                logits = self.model(batch)
+                probs = F.softmax(logits, dim=1)
+                confs, indices = torch.max(probs, dim=1)
 
-            results = []
-            for conf, idx in zip(confs, indices):
-                c = get_char(idx.item())
-                pct = round(conf.item() * 100.0, 2)
-                results.append((c, pct, idx.item()))
-            return results
+                for conf, idx in zip(confs, indices):
+                    c = get_char(idx.item())
+                    pct = round(conf.item() * 100.0, 2)
+                    results.append((c, pct, idx.item()))
+
+                del batch, logits, probs, confs, indices
+        return results
 
     def recognize_image(
         self,
