@@ -108,7 +108,7 @@ const fetchWithTimeout = async (endpoint, options = {}, timeoutMs = 60000) => {
  */
 export const checkBackendHealth = async () => {
   try {
-    const response = await fetchWithTimeout("/api/health", { method: "GET" }, 3500);
+    const response = await fetchWithTimeout("/api/health", { method: "GET" }, 30000);
 
     if (response.ok) {
       const data = await response.json();
@@ -330,7 +330,7 @@ export const fetchHistory = async (limit = 50, offset = 0, search = "", status =
       params.set("status", status);
     }
 
-    const res = await fetchWithTimeout(`/api/history?${params.toString()}`, { method: "GET" }, 5000);
+    const res = await fetchWithTimeout(`/api/history?${params.toString()}`, { method: "GET" }, 30000);
     if (res.ok) {
       const data = await res.json();
       return data.records || [];
@@ -346,7 +346,7 @@ export const fetchHistory = async (limit = 50, offset = 0, search = "", status =
  */
 export const fetchRecordById = async (recordId) => {
   try {
-    const res = await fetchWithTimeout(`/api/history/${encodeURIComponent(recordId)}`, { method: "GET" }, 5000);
+    const res = await fetchWithTimeout(`/api/history/${encodeURIComponent(recordId)}`, { method: "GET" }, 30000);
     if (res.ok) {
       const data = await res.json();
       return data.record || null;
@@ -369,7 +369,7 @@ export const updateRecord = async (recordId, updates = {}) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updates)
       },
-      8000
+      30000
     );
     if (res.ok) {
       const data = await res.json();
@@ -390,7 +390,7 @@ export const fetchProcessingHistory = async (limit = 50, offset = 0) => {
       limit: String(limit),
       offset: String(offset)
     });
-    const res = await fetchWithTimeout(`/api/processing-history?${params.toString()}`, { method: "GET" }, 5000);
+    const res = await fetchWithTimeout(`/api/processing-history?${params.toString()}`, { method: "GET" }, 30000);
     if (res.ok) {
       const data = await res.json();
       return data.events || [];
@@ -444,7 +444,7 @@ export const deleteProcessingHistoryItem = async (eventId, deleteDocument = fals
 export const fetchDashboardStats = async (range = "6 months") => {
   try {
     const cleanRange = range.replace(" ", "_");
-    const res = await fetchWithTimeout(`/api/dashboard/stats?range=${encodeURIComponent(cleanRange)}`, { method: "GET" }, 5000);
+    const res = await fetchWithTimeout(`/api/dashboard/stats?range=${encodeURIComponent(cleanRange)}`, { method: "GET" }, 30000);
     if (res.ok) {
       return await res.json();
     }
@@ -520,7 +520,7 @@ export const sendChatMessage = async (message, history = [], language = "en") =>
           language
         })
       },
-      30000 // 30s timeout for live LLMs
+      45000 // 45s timeout for live LLMs
     );
 
     if (res.ok) {
@@ -531,6 +531,10 @@ export const sendChatMessage = async (message, history = [], language = "en") =>
     }
   } catch (err) {
     console.error("sendChatMessage error:", err);
+    const isAbort = err.name === "AbortError" || (err.message && err.message.toLowerCase().includes("abort"));
+    if (isAbort) {
+      throw new Error("Assistant response timed out. The server is warming up — please ask again in a moment.");
+    }
     throw err;
   }
 };
@@ -540,7 +544,7 @@ export const sendChatMessage = async (message, history = [], language = "en") =>
  */
 export const fetchChatStatus = async () => {
   try {
-    const res = await fetchWithTimeout("/api/chat/status", { method: "GET" }, 5000);
+    const res = await fetchWithTimeout("/api/chat/status", { method: "GET" }, 30000);
     if (res.ok) {
       return await res.json();
     }
@@ -559,7 +563,7 @@ export const fetchChatStatus = async () => {
  */
 export const fetchChatSuggestions = async (language = "en") => {
   try {
-    const res = await fetchWithTimeout(`/api/chat/suggestions?language=${encodeURIComponent(language)}`, { method: "GET" }, 5000);
+    const res = await fetchWithTimeout(`/api/chat/suggestions?language=${encodeURIComponent(language)}`, { method: "GET" }, 30000);
     if (res.ok) {
       const data = await res.json();
       return data.suggestions || [];
