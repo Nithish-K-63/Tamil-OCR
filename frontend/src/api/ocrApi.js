@@ -47,10 +47,14 @@ const resolveUrl = (endpoint, baseUrl) => {
 /**
  * Safe fetch with AbortController timeout and automatic fallback between relative proxy and direct backend.
  */
-const fetchWithTimeout = async (endpoint, options = {}, timeoutMs = 5000) => {
+const PROD_RENDER_URL = "https://tamil-ocr-ymob.onrender.com";
+
+const fetchWithTimeout = async (endpoint, options = {}, timeoutMs = 60000) => {
   const config = getApiConfig();
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const timeoutId = setTimeout(() => {
+    controller.abort(new Error("Request timed out"));
+  }, timeoutMs);
 
   const headers = {
     "Accept": "application/json",
@@ -70,26 +74,31 @@ const fetchWithTimeout = async (endpoint, options = {}, timeoutMs = 5000) => {
   } catch (primaryErr) {
     clearTimeout(timeoutId);
 
-    // Automatic bidirectional fallback: if relative proxy fails, try direct backend; if direct fails, try relative proxy
-    if (primaryErr.name !== "AbortError") {
-      try {
-        const fallbackBase = (!config.baseUrl || config.baseUrl.trim() === "") ? "http://127.0.0.1:8000" : "";
-        const fallbackUrl = resolveUrl(endpoint, fallbackBase);
-        if (fallbackUrl !== primaryUrl) {
-          const fallbackController = new AbortController();
-          const fallbackTimer = setTimeout(() => fallbackController.abort(), timeoutMs);
-          const fallbackRes = await fetch(fallbackUrl, {
-            ...options,
-            signal: fallbackController.signal,
-            headers
-          });
-          clearTimeout(fallbackTimer);
-          return fallbackRes;
-        }
-      } catch {
-        // Fall through to throw primary error
-      }
+    const isAbort = primaryErr.name === "AbortError" || (primaryErr.message && primaryErr.message.toLowerCase().includes("abort"));
+    if (isAbort) {
+      throw new Error("Request timed out waiting for backend server. The server may be warming up — please try again in a few moments.");
     }
+
+    // Automatic bidirectional fallback: try live Render backend
+    try {
+      const isLocal = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+      const fallbackBase = isLocal ? "http://127.0.0.1:8000" : PROD_RENDER_URL;
+      const fallbackUrl = resolveUrl(endpoint, fallbackBase);
+      if (fallbackUrl !== primaryUrl) {
+        const fallbackController = new AbortController();
+        const fallbackTimer = setTimeout(() => fallbackController.abort(), timeoutMs);
+        const fallbackRes = await fetch(fallbackUrl, {
+          ...options,
+          signal: fallbackController.signal,
+          headers
+        });
+        clearTimeout(fallbackTimer);
+        return fallbackRes;
+      }
+    } catch {
+      // Fall through to throw primary error
+    }
+
     throw primaryErr;
   }
 };

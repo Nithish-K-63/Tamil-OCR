@@ -11,6 +11,8 @@ const getStoredConfig = (key, fallback = "") => {
   }
 };
 
+const PROD_RENDER_URL = "https://tamil-ocr-ymob.onrender.com";
+
 const resolveUrl = (endpoint) => {
   const cleanEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
   const baseUrl = import.meta.env.VITE_API_URL || getStoredConfig("tamilocr_api_url", "");
@@ -22,11 +24,13 @@ const resolveUrl = (endpoint) => {
 };
 
 /**
- * Universal fetch with timeout and automatic port 8000 fallback if proxy is inactive.
+ * Universal fetch with 45-second timeout and automatic Render HTTPS / local fallback.
  */
-const authFetch = async (endpoint, options = {}, timeoutMs = 8000) => {
+const authFetch = async (endpoint, options = {}, timeoutMs = 45000) => {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const timer = setTimeout(() => {
+    controller.abort(new Error("Connection timed out waiting for backend server response."));
+  }, timeoutMs);
 
   const headers = {
     "Accept": "application/json",
@@ -34,7 +38,8 @@ const authFetch = async (endpoint, options = {}, timeoutMs = 8000) => {
     ...(options.headers || {})
   };
 
-  const primaryUrl = resolveUrl(endpoint);
+  const cleanEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+  const primaryUrl = resolveUrl(cleanEndpoint);
 
   try {
     const res = await fetch(primaryUrl, {
@@ -46,25 +51,35 @@ const authFetch = async (endpoint, options = {}, timeoutMs = 8000) => {
     return res;
   } catch (err) {
     clearTimeout(timer);
-    if (err.name !== "AbortError") {
-      // Fallback directly to backend port 8000 if relative URL fails
-      try {
-        const fallbackUrl = `http://127.0.0.1:8000${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`;
-        if (fallbackUrl !== primaryUrl) {
-          const fbCtrl = new AbortController();
-          const fbTimer = setTimeout(() => fbCtrl.abort(), timeoutMs);
-          const fbRes = await fetch(fallbackUrl, {
-            ...options,
-            signal: fbCtrl.signal,
-            headers
-          });
-          clearTimeout(fbTimer);
-          return fbRes;
-        }
-      } catch (fbErr) {
-        // Both primary and fallback failed
-      }
+
+    const isAbort = err.name === "AbortError" || (err.message && err.message.toLowerCase().includes("abort"));
+
+    // If aborted due to timeout, provide a clear, helpful message
+    if (isAbort) {
+      throw new Error("The backend server is waking up from sleep. Please try again in a few moments.");
     }
+
+    // Try live Render fallback if primary URL failed
+    try {
+      const isLocal = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+      const fallbackBase = isLocal ? "http://127.0.0.1:8000" : PROD_RENDER_URL;
+      const fallbackUrl = `${fallbackBase}${cleanEndpoint}`;
+
+      if (fallbackUrl !== primaryUrl) {
+        const fbCtrl = new AbortController();
+        const fbTimer = setTimeout(() => fbCtrl.abort(), timeoutMs);
+        const fbRes = await fetch(fallbackUrl, {
+          ...options,
+          signal: fbCtrl.signal,
+          headers
+        });
+        clearTimeout(fbTimer);
+        return fbRes;
+      }
+    } catch {
+      // Fallback also failed
+    }
+
     throw err;
   }
 };
