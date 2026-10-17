@@ -252,17 +252,16 @@ class TamilOCREngine:
                 total_confs.extend(line_confs)
 
         # Assemble full document text
-        full_text = "\n".join(recognized_lines)
+        from app.services.preprocessing import clean_tamil_unicode_text
+        if recognized_lines:
+            full_text = clean_tamil_unicode_text("\n".join(recognized_lines))
+            avg_confidence = round(float(np.mean(total_confs)), 2) if total_confs else 85.0
+            lines_output = [l for l in full_text.splitlines() if l.strip()]
+        else:
+            full_text = ""
+            avg_confidence = 0.0
+            lines_output = []
 
-        # Fallback if no lines or components passed filters
-        if not full_text.strip():
-            bilevel = 255 - binary
-            center_patch = ImagePreprocessor.prepare_for_cnn(bilevel, 64)
-            char, conf, idx = self.predict_patch(center_patch)
-            full_text = char
-            total_confs.append(conf)
-
-        avg_confidence = round(float(np.mean(total_confs)), 2) if total_confs else 91.5
         words = full_text.split()
         duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
 
@@ -272,7 +271,8 @@ class TamilOCREngine:
             "inference_time_ms": duration_ms,
             "word_count": len(words),
             "char_count": len(full_text.replace("\n", "").replace(" ", "")),
-            "lines": recognized_lines,
+            "lines": lines_output,
+            "has_text": bool(full_text.strip()),
             "bounding_boxes": all_boxes,
             "model_info": get_model_metadata(),
             "preprocessing_meta": {

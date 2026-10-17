@@ -316,8 +316,16 @@ class IndicOCREngine:
             })
 
         # Assemble canonical Tamil text
-        full_text = "\n".join(recognized_lines) if recognized_lines else "நிலப் பதிவு ஆவணம் - தமிழ்நாடு அரசு"
-        avg_conf = float(np.mean(confidences)) if confidences else 94.8
+        from app.services.preprocessing import clean_tamil_unicode_text
+        if recognized_lines:
+            full_text = clean_tamil_unicode_text("\n".join(recognized_lines))
+            avg_conf = float(np.mean(confidences)) if confidences else 85.0
+            lines_output = [l for l in full_text.splitlines() if l.strip()]
+        else:
+            full_text = ""
+            avg_conf = 0.0
+            lines_output = []
+
         words = full_text.split()
         char_count = len(full_text.replace(" ", "").replace("\n", ""))
 
@@ -326,9 +334,10 @@ class IndicOCREngine:
         return {
             "text": full_text,
             "confidence": round(avg_conf, 2),
-            "lines": recognized_lines if recognized_lines else [full_text],
+            "lines": lines_output,
             "word_count": len(words),
             "char_count": char_count,
+            "has_text": bool(full_text.strip()),
             "inference_time_ms": round(duration_ms, 2),
             "bounding_boxes": bounding_boxes,
             "layout_blocks": block_transcriptions,

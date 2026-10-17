@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   ChevronLeft, 
   Eye, 
@@ -9,48 +9,64 @@ import {
   Download, 
   Save,
   RotateCw,
-  Cpu
+  Cpu,
+  AlertCircle,
+  FileText,
+  AlertTriangle,
+  ExternalLink
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
-import { updateRecord, resolveImageUrl } from '../api/ocrApi';
+import { updateRecord, resolveImageUrl, fetchRecordById } from '../api/ocrApi';
 
 const RecognitionResults = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { t } = useLanguage();
 
+  const queryId = searchParams.get('id') || searchParams.get('recordId');
+  const [currentRecord, setCurrentRecord] = useState(location.state?.record || null);
+  const [loadingRecord, setLoadingRecord] = useState(false);
+
   const result = location.state?.result;
-  const record = location.state?.record;
   const file = location.state?.file;
   const formData = location.state?.formData || {};
 
-  const defaultText = `தமிழ்நாடு அரசு
-வருவாய் மற்றும் பேரிடர் மேலாண்மைத் துறை
+  const docId = location.state?.record?.id || currentRecord?.id || result?.recordId || result?.record?.id || queryId || "TNOCR-0248";
 
-நிலப் பதிவு ஆவணம் - 1978
+  // If user refreshed the page and state was lost, fetch the record from database
+  useEffect(() => {
+    if (!currentRecord && docId && !docId.startsWith("demo")) {
+      setLoadingRecord(true);
+      fetchRecordById(docId).then(rec => {
+        if (rec) {
+          setCurrentRecord(rec);
+          if (rec.tamil_text !== undefined) {
+            setTamilText(rec.tamil_text || "");
+          }
+          if (rec.image_path) {
+            setPreviewUrl(resolveImageUrl(rec.image_path, rec.file_name));
+          }
+        }
+      }).catch(err => {
+        console.warn("Could not fetch record details on refresh:", err);
+      }).finally(() => {
+        setLoadingRecord(false);
+      });
+    }
+  }, [docId]);
 
-மாவட்டம்: தஞ்சாவூர்
-வட்டம்: கும்பகோணம்
-கிராமம்: சுந்தரபெருமாள் கோவில்
-
-இவ்வாவணத்தில் குறிப்பிடப்பட்டுள்ள நிலத்தின் மொத்த பரப்பளவு இரண்டு ஏக்கர் மற்றும் நாற்பத்து மூன்று சென்ட் ஆகும். நில உரிமையாளர் திரு. சுப்பிரமணியன் த/பெ. இராமசாமி என்பவருக்கு பட்டா வழங்கப்படுகிறது.
-
-வட்டாட்சியர்
-கும்பகோணம்`;
-
+  const record = currentRecord || location.state?.record;
   const textFromApi = result?.tamilText || result?.result?.text || record?.tamil_text;
-  const initialText = (textFromApi && typeof textFromApi === 'string' && textFromApi.trim().length > 0) 
-    ? textFromApi 
-    : defaultText;
+  const initialText = (textFromApi && typeof textFromApi === 'string') ? textFromApi : "";
 
-  const docTitle = record?.title || result?.metadata?.title || formData?.title || formData?.tamilTitle || "நிலப் பதிவு ஆவணம் - 1978";
-  const docId = record?.id || result?.recordId || result?.record?.id || "TNOCR-0248";
+  const docTitle = record?.title || result?.metadata?.title || formData?.title || formData?.tamilTitle || "நிலப் பதிவு ஆவணம்";
   const department = record?.department || result?.metadata?.department || formData?.department || "Revenue Department";
   const district = record?.district || result?.metadata?.district || formData?.district || "Thanjavur";
   const modelUsed = result?.metadata?.modelUsed || record?.model_name || "Tesseract OCR (Primary Model - lang='tam')";
 
-  const rawConf = result?.confidenceScore ?? result?.result?.confidence ?? record?.confidenceRaw ?? record?.confidence ?? 95;
-  const confidence = Math.round(typeof rawConf === 'number' ? rawConf : parseFloat(rawConf) || 95);
+  const rawConf = result?.confidenceScore ?? result?.result?.confidence ?? record?.confidenceRaw ?? record?.confidence ?? (initialText ? 90 : 0);
+  const confidence = Math.round(typeof rawConf === 'number' ? rawConf : parseFloat(rawConf) || (initialText ? 90 : 0));
 
   const rawPreview = location.state?.previewUrl || 
     (file ? URL.createObjectURL(file) : null) || 
@@ -66,8 +82,8 @@ const RecognitionResults = () => {
 
   useEffect(() => {
     const textFromApi = result?.tamilText || result?.result?.text || record?.tamil_text;
-    if (textFromApi && typeof textFromApi === 'string' && textFromApi.trim().length > 0) {
-      setTamilText(textFromApi);
+    if (textFromApi !== undefined && textFromApi !== null) {
+      setTamilText(String(textFromApi));
     }
   }, [result, record]);
 
@@ -79,11 +95,12 @@ const RecognitionResults = () => {
     setPreviewUrl(nextPreview);
   }, [location.state, file, record]);
 
-  const wordsCount = tamilText.trim().split(/\s+/).filter(Boolean).length;
-  const charsCount = tamilText.length;
-  const fileName = file?.name || record?.file_name || result?.fileName || "land_record_1978.jpg";
+  const wordsCount = tamilText.trim() ? tamilText.trim().split(/\s+/).filter(Boolean).length : 0;
+  const charsCount = tamilText.replace(/\s+/g, '').length;
+  const fileName = file?.name || record?.file_name || result?.fileName || "manuscript_document.jpg";
 
   const handleCopy = () => {
+    if (!tamilText) return;
     navigator.clipboard.writeText(tamilText);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -107,9 +124,7 @@ const RecognitionResults = () => {
 
   return (
     <div className="space-y-6">
-      {/* ========================================================
-          Top Header Bar
-          ======================================================== */}
+      {/* Top Header Bar */}
       <div>
         <button
           onClick={() => navigate('/upload')}
@@ -133,15 +148,31 @@ const RecognitionResults = () => {
             </p>
           </div>
 
-          {/* High Confidence Recognition Score Badge */}
+          {/* Recognition Score Badge */}
           <div className="flex items-center gap-3 self-start sm:self-auto">
-            <div className="w-12 h-12 rounded-full border-2 border-[#00737D] flex flex-col items-center justify-center font-bold text-xs bg-[#E0F2F1]/50 dark:bg-[#153438]/50 text-[#00737D] dark:text-[#2DD4BF] shadow-xs">
+            <div className={`w-12 h-12 rounded-full border-2 flex flex-col items-center justify-center font-bold text-xs shadow-xs ${
+              confidence >= 80 
+                ? 'border-[#00737D] bg-[#E0F2F1]/50 dark:bg-[#153438]/50 text-[#00737D] dark:text-[#2DD4BF]'
+                : confidence > 0 
+                ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400'
+                : 'border-gray-400 bg-gray-100 dark:bg-gray-800 text-gray-500'
+            }`}>
               <span className="text-sm font-extrabold leading-none">{confidence}</span>
               <span className="text-[8px] leading-none">%</span>
             </div>
             <div>
-              <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
-                {confidence >= 90 ? t('badge_high_conf', 'High confidence') : t('badge_review_suggested', 'Review suggested')}
+              <p className={`text-xs font-bold ${
+                confidence >= 80 
+                  ? 'text-emerald-700 dark:text-emerald-400' 
+                  : confidence > 0 
+                  ? 'text-amber-700 dark:text-amber-400' 
+                  : 'text-gray-500'
+              }`}>
+                {confidence >= 90 
+                  ? t('badge_high_conf', 'High confidence') 
+                  : confidence >= 70 
+                  ? t('badge_review_suggested', 'Review suggested') 
+                  : t('badge_low_conf', 'Low confidence warning')}
               </p>
               <p className="text-[10px] text-[#7A7185] dark:text-[#9D93A7]">
                 {t('badge_recog_score', 'Recognition score')}
@@ -151,9 +182,7 @@ const RecognitionResults = () => {
         </div>
       </div>
 
-      {/* ========================================================
-          Split 2-Column: Original Manuscript vs Recognized Tamil Text
-          ======================================================== */}
+      {/* Split 2-Column: Original Manuscript vs Recognized Tamil Text */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         {/* Left Pane: 01 Original Manuscript */}
         <div className="rounded-2xl border bg-white/60 dark:bg-[#1D1726] border-[#DFD7C7] dark:border-[#2C2237] shadow-xs overflow-hidden">
@@ -167,15 +196,20 @@ const RecognitionResults = () => {
                   {t('label_orig_manuscript', 'Original manuscript')}
                 </h3>
                 <p className="text-[10px] text-[#7A7185] dark:text-[#9D93A7] font-mono">
-                  {fileName} {file?.size ? `· ${(file.size / (1024 * 1024)).toFixed(1)} MB` : '· 3.8 MB'}
+                  {fileName} {file?.size ? `· ${(file.size / (1024 * 1024)).toFixed(1)} MB` : ''}
                 </p>
               </div>
             </div>
 
-            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#DFD7C7] dark:border-[#382C46] text-xs font-medium text-[#4A4154] dark:text-[#D8CEE2] hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer">
+            <a
+              href={previewUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#DFD7C7] dark:border-[#382C46] text-xs font-medium text-[#4A4154] dark:text-[#D8CEE2] hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer"
+            >
               <Eye className="w-3.5 h-3.5" />
-              <span>{t('btn_fit_view', 'Fit view')}</span>
-            </button>
+              <span>{t('btn_fit_view', 'Open full image')}</span>
+            </a>
           </div>
 
           {/* Dotted Canvas with Manuscript Page or Uploaded Image */}
@@ -184,45 +218,15 @@ const RecognitionResults = () => {
               <div className="w-full flex items-center justify-center">
                 <img 
                   src={previewUrl} 
-                  alt="Uploaded Manuscript" 
+                  alt="Original Document" 
                   className="max-h-[460px] max-w-full object-contain rounded-xl shadow-lg border border-[#DFD7C7] dark:border-[#382C46]" 
                 />
               </div>
             ) : (
-              <div className="w-full max-w-sm bg-[#EFE8D8] text-[#2C241D] rounded-xl shadow-xl p-6 sm:p-8 border border-[#DFD3BE] relative font-tamil">
-                {/* Year Stamp */}
-                <div className="absolute top-4 right-4 px-2 py-0.5 border border-[#8B3A2B]/40 rounded text-[#8B3A2B] text-xs font-mono font-bold tracking-wider">
-                  {formData?.year || "1978"}
-                </div>
-
-                <div className="space-y-4 pt-2">
-                  <div className="text-center font-bold text-base text-[#1F1812] tracking-wide">
-                    தமிழ்நாடு அரசு
-                  </div>
-                  <div className="text-xs text-center text-[#4A3E31] leading-relaxed">
-                    வருவாய்த் துறை — நிலப் பதிவு
-                  </div>
-                  <div className="w-12 h-0.5 bg-[#4A3E31]/40 mx-auto my-2" />
-
-                  <div className="space-y-2 text-xs text-[#3E3428] leading-relaxed">
-                    <p>மாவட்டம்: {district}</p>
-                    <p>வட்டம்: கும்பகோணம்</p>
-                    <p>இவ்வாவணத்தில் குறிப்பிடப்பட்டுள்ள நிலத்தின் மொத்த பரப்பளவு இரண்டு ஏக்கர் நாற்பத்து மூன்று சென்ட்...</p>
-                  </div>
-
-                  <div className="pt-6 flex justify-between items-end relative">
-                    <div className="text-[11px] text-[#4A3E31]">
-                      <span className="border-b border-[#4A3E31]/60 pb-0.5">வட்டாட்சியர்</span>
-                      <br />
-                      கும்பகோணம்
-                    </div>
-
-                    {/* Stamp */}
-                    <div className="w-14 h-14 rounded-full border-2 border-red-700/60 flex items-center justify-center text-red-800 text-[10px] font-bold rotate-[-10deg] shadow-inner">
-                      த.நா. அரசு
-                    </div>
-                  </div>
-                </div>
+              <div className="w-full max-w-sm text-center p-8 border-2 border-dashed border-[#DFD7C7] dark:border-[#382C46] rounded-xl text-[#7A7185]">
+                <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p className="text-xs font-semibold">{fileName}</p>
+                <p className="text-[10px] mt-1">Image preview not available</p>
               </div>
             )}
           </div>
@@ -248,15 +252,19 @@ const RecognitionResults = () => {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => isEditing ? handleSave() : setIsEditing(true)}
+                disabled={saving}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#DFD7C7] dark:border-[#382C46] text-xs font-medium text-[#4A4154] dark:text-[#D8CEE2] hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer"
               >
                 {isEditing ? <Save className="w-3.5 h-3.5 text-emerald-500" /> : <Edit3 className="w-3.5 h-3.5" />}
-                <span>{isEditing ? t('btn_save', 'Save') : t('btn_edit', 'Edit')}</span>
+                <span>{isEditing ? (saving ? t('btn_saving', 'Saving...') : t('btn_save', 'Save')) : t('btn_edit', 'Edit')}</span>
               </button>
 
               <button
                 onClick={handleCopy}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#DFD7C7] dark:border-[#382C46] text-xs font-medium text-[#4A4154] dark:text-[#D8CEE2] hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer"
+                disabled={!tamilText}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#DFD7C7] dark:border-[#382C46] text-xs font-medium transition-colors cursor-pointer ${
+                  !tamilText ? 'opacity-40 cursor-not-allowed text-gray-400' : 'text-[#4A4154] dark:text-[#D8CEE2] hover:bg-black/5 dark:hover:bg-white/5'
+                }`}
               >
                 {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
                 <span>{copied ? t('btn_copied', 'Copied') : t('btn_copy_text', 'Copy')}</span>
@@ -267,9 +275,15 @@ const RecognitionResults = () => {
           {/* Subheader Confidence Legend */}
           <div className="px-6 py-2.5 bg-[#FAF8F5] dark:bg-[#16101E] border-b border-[#DFD7C7] dark:border-[#2C2237] flex items-center gap-4 text-[11px]">
             <div className="flex items-center gap-1.5">
-              <span className={`w-2 h-2 rounded-full ${confidence >= 90 ? 'bg-emerald-500' : 'bg-[#C07D2A]'}`} />
+              <span className={`w-2 h-2 rounded-full ${
+                confidence >= 90 ? 'bg-emerald-500' : confidence >= 70 ? 'bg-amber-500' : 'bg-red-500'
+              }`} />
               <span className="text-[#7A7185] dark:text-[#9D93A7]">
-                {confidence >= 90 ? t('legend_high_conf', 'High confidence (>90%)') : t('badge_review_suggested', 'Review suggested')}
+                {confidence >= 90 
+                  ? t('legend_high_conf', 'High confidence (>90%)') 
+                  : confidence >= 70 
+                  ? t('badge_review_suggested', 'Review suggested (70-90%)') 
+                  : t('badge_low_conf', 'Low confidence (<70%)')}
               </span>
             </div>
             {saved && (
@@ -285,11 +299,26 @@ const RecognitionResults = () => {
               <textarea
                 value={tamilText}
                 onChange={(e) => setTamilText(e.target.value)}
+                placeholder="தமிழ் உரை அல்லது திருத்தங்களை இங்கே தட்டச்சு செய்யவும்..."
                 className="w-full h-96 p-4 rounded-xl border border-[#00737D] bg-white dark:bg-[#16101E] text-sm font-tamil leading-relaxed focus:outline-none resize-none"
               />
-            ) : (
-              <div className="whitespace-pre-line space-y-4">
+            ) : tamilText && tamilText.trim() ? (
+              <div className="whitespace-pre-line space-y-3 selection:bg-[#00737D]/20">
                 {tamilText}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-80 text-center p-6 border-2 border-dashed border-[#DFD7C7] dark:border-[#382C46] rounded-xl">
+                <AlertCircle className="w-10 h-10 text-amber-500 mb-3" />
+                <h4 className="font-semibold text-base mb-1 font-tamil">எந்த தமிழ் உரையும் கண்டறியப்படவில்லை</h4>
+                <p className="text-xs text-[#7A7185] dark:text-[#9D93A7] max-w-sm mb-4 font-english">
+                  No legible Tamil text could be extracted from this document image. The scan may be faint, heavily degraded, or blank.
+                </p>
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="px-3 py-1.5 rounded-lg bg-[#00737D] text-white text-xs font-semibold hover:bg-[#005f67] cursor-pointer"
+                >
+                  Enter / Transcribe Manually
+                </button>
               </div>
             )}
           </div>
@@ -301,6 +330,7 @@ const RecognitionResults = () => {
             </span>
             <button
               onClick={() => {
+                if (!tamilText) return;
                 const element = document.createElement("a");
                 const fileBlob = new Blob([tamilText], { type: 'text/plain;charset=utf-8' });
                 element.href = URL.createObjectURL(fileBlob);
@@ -308,7 +338,10 @@ const RecognitionResults = () => {
                 document.body.appendChild(element);
                 element.click();
               }}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#00737D] hover:bg-[#005F67] text-white font-semibold text-xs transition-colors shadow-xs cursor-pointer"
+              disabled={!tamilText}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-white font-semibold text-xs transition-colors shadow-xs ${
+                !tamilText ? 'bg-gray-400 cursor-not-allowed opacity-50' : 'bg-[#00737D] hover:bg-[#005F67] cursor-pointer'
+              }`}
             >
               <Download className="w-3.5 h-3.5" />
               <span>{t('btn_export_record', 'Export Record')}</span>

@@ -2,7 +2,8 @@ import cv2
 import numpy as np
 from PIL import Image
 import io
-from typing import Tuple, List, Dict, Any, Optional
+from pathlib import Path
+from typing import Tuple, List, Dict, Any, Optional, Union
 
 class ImagePreprocessor:
     """
@@ -296,3 +297,113 @@ class ImagePreprocessor:
         # White background is +1.0, black stroke is -1.0
         normalized = ((resized.astype(np.float32) / 255.0) - 0.5) / 0.5
         return normalized
+
+    @classmethod
+    def preprocess_for_ocr(
+        cls,
+        img_input: Any
+    ) -> Tuple[np.ndarray, Dict[str, Any]]:
+        """
+        Comprehensive document preprocessing for Tamil OCR:
+        1. Decodes and converts input to OpenCV BGR / Grayscale.
+        2. Detects document skew and rotates if between 0.5 and 35 degrees.
+        3. Intelligent upscaling for low-resolution / small mobile scans.
+        4. CLAHE contrast enhancement for faded or yellowed historical paper.
+        5. Mild bilateral filtering to suppress scanner noise while preserving pulli dots.
+        Returns: (processed_image, metadata_dict)
+        """
+        import unicodedata
+
+        if isinstance(img_input, (bytes, bytearray)):
+            img = cls.load_image(bytes(img_input))
+        elif isinstance(img_input, (str, Path)):
+            with open(str(img_input), "rb") as f:
+                img = cls.load_image(f.read())
+        elif isinstance(img_input, Image.Image):
+            pil_rgb = img_input.convert("RGB")
+            img = cv2.cvtColor(np.array(pil_rgb), cv2.COLOR_RGB2BGR)
+        elif isinstance(img_input, np.ndarray):
+            img = img_input.copy()
+        else:
+            raise ValueError(f"Unsupported image type: {type(img_input)}")
+
+        if img is None or img.size == 0:
+            raise ValueError("Empty or invalid image data passed to preprocessor.")
+
+        h, w = img.shape[:2]
+        meta = {
+            "original_dimensions": f"{w}x{h}",
+            "deskew_angle": 0.0,
+            "upscaled": False,
+            "contrast_enhanced": True
+        }
+
+        # 1. Check and upscale small or low-resolution images so character stroke height is >= 28px
+        min_dim = min(h, w)
+        if min_dim < 400:
+            scale_factor = min(2.5, 600.0 / float(max(1, min_dim)))
+            new_w = int(w * scale_factor)
+            new_h = int(h * scale_factor)
+            img = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_CUBIC)
+            meta["upscaled"] = True
+            meta["scale_factor"] = round(scale_factor, 2)
+            h, w = img.shape[:2]
+
+        # 2. Deskew estimation and correction
+        deskewed, angle = cls.deskew(img)
+        meta["deskew_angle"] = round(angle, 2)
+
+        # 3. Convert to Grayscale
+        if len(deskewed.shape) == 3:
+            gray = cv2.cvtColor(deskewed, cv2.COLOR_BGR2GRAY)
+        else:
+            gray = deskewed.copy()
+
+        # 4. Adaptive Contrast Enhancement (CLAHE)
+        # Prevents faded ancient handwriting from dropping below binarization thresholds
+        clahe = cv2.createCLAHE(clipLimit=2.2, tileGridSize=(8, 8))
+        enhanced = clahe.apply(gray)
+
+        # 5. Denoise with edge-preserving bilateral filter
+        denoised = cv2.bilateralFilter(enhanced, d=5, sigmaColor=30, sigmaSpace=30)
+
+        meta["final_dimensions"] = f"{w}x{h}"
+        return denoised, meta
+
+
+def clean_tamil_unicode_text(text: str) -> str:
+    """
+    Standardize and clean recognized Tamil text:
+    1. Canonical NFC normalization (composing pre-vowels, pulli dots into proper Unicode sequences).
+    2. Strips phantom zero-width spaces/characters while strictly preserving Tamil vowel signs,
+       pulli (்), aytham (ஃ), grantha letters, punctuation, spaces, and line breaks.
+    """
+    import unicodedata
+    if not text:
+        return ""
+
+    # NFC Normalization
+    normalized = unicodedata.normalize("NFC", text)
+
+    # Clean non-printable control characters (except newline, tab, carriage return)
+    cleaned_chars = []
+    for ch in normalized:
+        if ch in ("\n", "\r", "\t", " "):
+            cleaned_chars.append(ch)
+        elif ch in ("\u200b", "\ufeff"):
+            continue  # remove invisible zero-width spaces that corrupt string indexing
+        elif ch.isprintable():
+            cleaned_chars.append(ch)
+
+    result = "".join(cleaned_chars)
+    # Strip trailing whitespace on each line, collapse multiple blank lines
+    lines = [line.strip() for line in result.splitlines()]
+    clean_lines = []
+    for line in lines:
+        if line:
+            clean_lines.append(line)
+        elif clean_lines and clean_lines[-1] != "":
+            clean_lines.append("")
+
+    return "\n".join(clean_lines).strip()
+

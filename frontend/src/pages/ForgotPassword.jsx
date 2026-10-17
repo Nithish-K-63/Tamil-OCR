@@ -1,22 +1,40 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Mail, ArrowLeft, CheckCircle2, Send, Sun, Moon } from 'lucide-react';
+import { Mail, ArrowLeft, CheckCircle2, Send, Sun, Moon, AlertCircle } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import { forgotPasswordApi } from '../api/authApi';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
+  const [resetToken, setResetToken] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const { theme, toggleTheme } = useTheme();
   const isDark = theme === 'dark';
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+
+    const cleanEmail = email.trim();
+    if (!cleanEmail) {
+      setError('Please enter your government email address.');
+      return;
+    }
+
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const res = await forgotPasswordApi(cleanEmail);
+      if (res?.resetToken) {
+        setResetToken(res.resetToken);
+      }
       setSent(true);
-    }, 600);
+    } catch (err) {
+      setError(err.message || 'Failed to process password recovery request.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -58,16 +76,26 @@ const ForgotPassword = () => {
           </p>
         </div>
 
+        {error && (
+          <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs font-medium text-center flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
         {sent ? (
           <div className="text-center p-6 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 space-y-3">
             <CheckCircle2 className="w-8 h-8 mx-auto text-emerald-600 dark:text-emerald-400" />
-            <h3 className="font-bold text-sm">Recovery Link Sent!</h3>
+            <h3 className="font-bold text-sm">Recovery Link Generated!</h3>
             <p className="text-xs text-[#5D5467] dark:text-[#A79CB1]">
-              A password reset link has been dispatched to <strong>{email}</strong>.
+              A password reset authorization token has been generated for <strong>{email}</strong>.
             </p>
             <div className="pt-2">
-              <Link to="/reset-password" className="text-xs font-semibold text-[#00737D] underline">
-                Proceed to Reset Password Page
+              <Link 
+                to={`/reset-password?email=${encodeURIComponent(email)}${resetToken ? `&token=${encodeURIComponent(resetToken)}` : ''}`}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#00737D] text-white text-xs font-semibold hover:bg-[#005F67] transition-all shadow-sm"
+              >
+                Proceed to Reset Password
               </Link>
             </div>
           </div>
@@ -96,10 +124,10 @@ const ForgotPassword = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 rounded-xl bg-[#00737D] hover:bg-[#005F67] text-white font-semibold text-xs shadow-md shadow-[#00737D]/20 flex items-center justify-center gap-2 transition-all"
+              className="w-full py-3 rounded-xl bg-[#00737D] hover:bg-[#005F67] text-white font-semibold text-xs shadow-md shadow-[#00737D]/20 flex items-center justify-center gap-2 transition-all cursor-pointer"
             >
-              <Send className="w-3.5 h-3.5" />
-              <span>{loading ? 'Sending link...' : 'Send Reset Link'}</span>
+              <Send className="w-4 h-4" />
+              <span>{loading ? 'Verifying Account...' : 'Send Recovery Instructions'}</span>
             </button>
           </form>
         )}

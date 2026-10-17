@@ -12,6 +12,7 @@ from app.api.routes_ocr import router as ocr_router
 from app.api.routes_history import router as history_router
 from app.api.routes_dashboard import router as dashboard_router
 from app.api.routes_chat import router as chat_router
+from app.api.routes_auth import router as auth_router
 
 # Configure Logging
 logging.basicConfig(
@@ -63,6 +64,7 @@ app.include_router(ocr_router)
 app.include_router(history_router)
 app.include_router(dashboard_router)
 app.include_router(chat_router)
+app.include_router(auth_router)
 
 
 # Mount dedicated document uploads storage

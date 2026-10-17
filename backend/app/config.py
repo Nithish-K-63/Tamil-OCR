@@ -54,6 +54,17 @@ OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "").strip()
 OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini").strip()
 OPENAI_BASE_URL = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1").strip().rstrip("/")
 
+# Google Cloud OAuth 2.0 Configuration (Secure Backend Credentials)
+GOOGLE_CLIENT_ID = (
+    os.environ.get("GOOGLE_CLIENT_ID", "").strip() or 
+    os.environ.get("VITE_GOOGLE_CLIENT_ID", "").strip() or 
+    os.environ.get("OAUTH_CLIENT_API", "").strip()
+)
+GOOGLE_CLIENT_SECRET = (
+    os.environ.get("GOOGLE_CLIENT_SECRET", "").strip() or 
+    os.environ.get("OAUTH_CLIENT_SECRET", "").strip()
+)
+GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI", "").strip() or "http://localhost:3000/login"
 
 # MongoDB Atlas Configuration
 import urllib.parse
@@ -87,4 +98,35 @@ else:
         MONGODB_URI = f"mongodb+srv://{encoded_user}:{encoded_pw}@{MONGODB_CLUSTER}/{MONGODB_DB_NAME}?retryWrites=true&w=majority&appName=Cluster0"
     else:
         MONGODB_URI = ""
+
+# ============================================================================
+# Email Service Configuration (SMTP / Transactional Email Service)
+# ============================================================================
+SMTP_HOST = os.environ.get("SMTP_HOST", "").strip()
+try:
+    SMTP_PORT = int(os.environ.get("SMTP_PORT", 587))
+except ValueError:
+    SMTP_PORT = 587
+
+SMTP_USER = (
+    os.environ.get("SMTP_USER", "").strip() or
+    os.environ.get("EMAIL_USER", "").strip()
+)
+SMTP_PASSWORD = (
+    os.environ.get("SMTP_PASSWORD", "").strip() or
+    os.environ.get("EMAIL_PASSWORD", "").strip() or
+    os.environ.get("SMTP_PASS", "").strip()
+)
+SMTP_FROM = (
+    os.environ.get("SMTP_FROM", "").strip() or
+    os.environ.get("EMAIL_FROM", "").strip() or
+    (SMTP_USER if SMTP_USER else "noreply@tamilocr.gov.in")
+)
+SMTP_USE_TLS = os.environ.get("SMTP_USE_TLS", "true").lower() in ("true", "1", "yes")
+SMTP_USE_SSL = os.environ.get("SMTP_USE_SSL", "false").lower() in ("true", "1", "yes")
+APP_URL = (
+    os.environ.get("APP_URL", "") or
+    os.environ.get("FRONTEND_URL", "") or
+    "http://localhost:3000"
+).strip().rstrip("/")
 

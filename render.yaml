@@ -1,0 +1,21 @@
+services:
+  # TamilOCR FastAPI Backend on Render
+  - type: web
+    name: tamilocr-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: "pip install --upgrade pip && pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu && pip install -r requirements.txt"
+    startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    plan: free
+    region: oregon
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.0
+      - key: PORT
+        value: 8000
+      - key: CORS_ORIGINS
+        value: "https://*.vercel.app,http://localhost:3000,http://localhost:5173"
+      - key: DEVICE
+        value: cpu
+      - key: CONFIDENCE_THRESHOLD
+        value: 80.0

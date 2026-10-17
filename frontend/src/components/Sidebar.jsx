@@ -79,6 +79,7 @@ const Sidebar = ({ isOpen, onClose }) => {
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.path || 
+                (item.path === '/' && location.pathname === '/dashboard') ||
                 (item.path === '/pipeline' && location.pathname === '/results');
               return (
                 <NavLink

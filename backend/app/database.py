@@ -6,7 +6,11 @@ Supports MongoDB Atlas (Production Cloud Storage) with resilient SQLite fallback
 import sqlite3
 import datetime
 import logging
+import hashlib
+import hmac
+import secrets
 from typing import List, Dict, Any, Optional
+
 
 import pymongo
 from pymongo.errors import (
@@ -27,6 +31,16 @@ from app.config import (
 )
 
 logger = logging.getLogger("TamilOCR.Database")
+
+DEFAULT_ADMIN_USER = {
+    "id": "USR-TNGOV-001",
+    "email": "admin@tamilocr.gov.in",
+    "full_name": "Arun Kumar",
+    "role": "Project Administrator",
+    "department": "Tamil Nadu Heritage Records Division",
+    "badge_id": "TN-ARCH-2025",
+    "password": "TamilOCR@2026"
+}
 
 # Singleton Mongo client & database handles
 _mongo_client: Optional[pymongo.MongoClient] = None
@@ -198,6 +212,32 @@ def _init_sqlite():
         created_at TEXT NOT NULL
     )
     """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,
+        email TEXT UNIQUE NOT NULL,
+        full_name TEXT NOT NULL,
+        password_hash TEXT NOT NULL,
+        role TEXT NOT NULL DEFAULT 'Archive Specialist',
+        department TEXT NOT NULL DEFAULT 'Tamil Nadu Heritage Records Division',
+        badge_id TEXT,
+        reset_token TEXT,
+        reset_token_expiry TEXT,
+        created_at TEXT NOT NULL,
+        last_login TEXT
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS sessions (
+        token TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        expires_at TEXT NOT NULL,
+        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+    """)
     conn.commit()
 
     cursor.execute("SELECT COUNT(*) FROM records")
@@ -216,6 +256,27 @@ def _init_sqlite():
                 r["word_count"], r["lines_count"], r["tamil_text"], r["file_name"],
                 r["model_name"], r["processing_time_ms"], r["created_at"]
             ))
+        conn.commit()
+
+    # Seed default admin user in SQLite if empty
+    cursor.execute("SELECT COUNT(*) FROM users")
+    user_count = cursor.fetchone()[0]
+    if user_count == 0:
+        admin_hash = hash_password(DEFAULT_ADMIN_USER["password"])
+        cursor.execute("""
+        INSERT INTO users (
+            id, email, full_name, password_hash, role, department, badge_id, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            DEFAULT_ADMIN_USER["id"],
+            DEFAULT_ADMIN_USER["email"].lower(),
+            DEFAULT_ADMIN_USER["full_name"],
+            admin_hash,
+            DEFAULT_ADMIN_USER["role"],
+            DEFAULT_ADMIN_USER["department"],
+            DEFAULT_ADMIN_USER["badge_id"],
+            datetime.datetime.now().isoformat()
+        ))
         conn.commit()
     conn.close()
 
@@ -268,10 +329,34 @@ def connect_mongo_atlas() -> bool:
         db["processing_history"].create_index([("created_at", pymongo.DESCENDING)])
         db["processing_history"].create_index([("record_id", pymongo.ASCENDING)])
 
+        # Ensure user & session collections & indexes
+        db["users"].create_index([("email", pymongo.ASCENDING)], unique=True)
+        db["users"].create_index([("id", pymongo.ASCENDING)], unique=True)
+        db["sessions"].create_index([("token", pymongo.ASCENDING)], unique=True)
+        db["sessions"].create_index([("expires_at", pymongo.ASCENDING)])
+
         # Seed records if Atlas collection is empty
         if db["records"].count_documents({}) == 0:
             logger.info("[MongoDB Atlas] Seeding initial demonstration records into 'records' collection...")
             db["records"].insert_many([dict(r) for r in SEED_RECORDS])
+
+        # Seed default admin user in Atlas if users collection is empty
+        if db["users"].count_documents({}) == 0:
+            logger.info("[MongoDB Atlas] Seeding initial administrator account into 'users' collection...")
+            admin_doc = {
+                "id": DEFAULT_ADMIN_USER["id"],
+                "email": DEFAULT_ADMIN_USER["email"].lower(),
+                "full_name": DEFAULT_ADMIN_USER["full_name"],
+                "password_hash": hash_password(DEFAULT_ADMIN_USER["password"]),
+                "role": DEFAULT_ADMIN_USER["role"],
+                "department": DEFAULT_ADMIN_USER["department"],
+                "badge_id": DEFAULT_ADMIN_USER["badge_id"],
+                "reset_token": None,
+                "reset_token_expiry": None,
+                "created_at": datetime.datetime.now().isoformat(),
+                "last_login": None
+            }
+            db["users"].insert_one(admin_doc)
 
         _mongo_client = client
         _mongo_db = db
@@ -1095,3 +1180,422 @@ def test_temporary_atlas_crud() -> Dict[str, Any]:
             "success": False,
             "reason": str(e)
         }
+
+
+# ============================================================================
+# User Authentication & Session Management (MongoDB Atlas + SQLite Fallback)
+# ============================================================================
+
+def hash_password(password: str) -> str:
+    """Generate PBKDF2-HMAC-SHA256 hash with 100,000 iterations and random salt."""
+    salt = secrets.token_hex(16)
+    key = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), 100_000)
+    return f"pbkdf2:sha256:100000${salt}${key.hex()}"
+
+
+def verify_password(password: str, stored_hash: str) -> bool:
+    """Verify password against stored PBKDF2 hash using timing-safe comparison."""
+    try:
+        parts = stored_hash.split("$")
+        if len(parts) != 3 or not parts[0].startswith("pbkdf2:sha256"):
+            return False
+        salt = parts[1]
+        expected_key = parts[2]
+        key = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), 100_000)
+        return hmac.compare_digest(key.hex(), expected_key)
+    except Exception:
+        return False
+
+
+def _sanitize_user(user_doc: Dict[str, Any]) -> Dict[str, Any]:
+    """Sanitize user object for secure client response (removes password_hash)."""
+    name = user_doc.get("full_name") or user_doc.get("name") or "Archive Specialist"
+    initials = "".join([part[0] for part in name.split() if part][:2]).upper() or "TN"
+    return {
+        "id": user_doc.get("id"),
+        "email": user_doc.get("email"),
+        "name": name,
+        "fullName": name,
+        "role": user_doc.get("role") or "Archive Specialist",
+        "department": user_doc.get("department") or "Tamil Nadu Heritage Records Division",
+        "badgeId": user_doc.get("badge_id") or "TN-ARCH",
+        "avatar": initials,
+        "createdAt": user_doc.get("created_at"),
+        "lastLogin": user_doc.get("last_login")
+    }
+
+
+def create_user(
+    full_name: str,
+    email: str,
+    password: str,
+    department: str = "Tamil Nadu Heritage Records Division",
+    role: str = "Project Administrator",
+    badge_id: Optional[str] = None
+) -> Dict[str, Any]:
+    """Register and persist a new user in MongoDB Atlas and SQLite fallback."""
+    clean_email = email.strip().lower()
+    clean_name = full_name.strip()
+    user_id = f"USR-{secrets.token_hex(4).upper()}"
+    badge = badge_id or f"TN-GOV-{secrets.token_hex(2).upper()}"
+    p_hash = hash_password(password)
+    now_iso = datetime.datetime.now().isoformat()
+
+    # Check for existing user in MongoDB Atlas
+    if _db_status["atlas_connected"] and _mongo_db is not None:
+        try:
+            if _mongo_db["users"].find_one({"email": clean_email}):
+                raise ValueError("An account with this email address already exists.")
+        except ValueError:
+            raise
+        except Exception as e:
+            logger.warning(f"[User] Atlas check error: {e}")
+
+    # Check for existing user in SQLite
+    conn = get_sqlite_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT id FROM users WHERE LOWER(email) = ?", (clean_email,))
+        if cur.fetchone():
+            raise ValueError("An account with this email address already exists.")
+
+        # Insert into SQLite
+        cur.execute("""
+        INSERT INTO users (
+            id, email, full_name, password_hash, role, department, badge_id, created_at, last_login
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            user_id, clean_email, clean_name, p_hash, role, department, badge, now_iso, now_iso
+        ))
+        conn.commit()
+    finally:
+        conn.close()
+
+    # Insert into MongoDB Atlas
+    user_doc = {
+        "id": user_id,
+        "email": clean_email,
+        "full_name": clean_name,
+        "password_hash": p_hash,
+        "role": role,
+        "department": department,
+        "badge_id": badge,
+        "reset_token": None,
+        "reset_token_expiry": None,
+        "created_at": now_iso,
+        "last_login": now_iso
+    }
+    if _db_status["atlas_connected"] and _mongo_db is not None:
+        try:
+            _mongo_db["users"].update_one(
+                {"email": clean_email},
+                {"$set": user_doc},
+                upsert=True
+            )
+            logger.info(f"[MongoDB Atlas] User '{clean_email}' persisted to 'users' collection.")
+        except Exception as e:
+            logger.error(f"[MongoDB Atlas] Failed to persist user: {e}")
+
+    return _sanitize_user(user_doc)
+
+
+def get_user_by_email(email: str) -> Optional[Dict[str, Any]]:
+    """Find user by email address across MongoDB Atlas and SQLite fallback."""
+    if not email:
+        return None
+    clean_email = email.strip().lower()
+    user_doc = None
+
+    # Try MongoDB Atlas first
+    if _db_status["atlas_connected"] and _mongo_db is not None:
+        try:
+            user_doc = _mongo_db["users"].find_one({"email": clean_email})
+        except Exception as e:
+            logger.warning(f"[Database] Atlas user lookup error: {e}")
+
+    # Fallback to SQLite
+    if not user_doc:
+        conn = get_sqlite_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT * FROM users WHERE LOWER(email) = ?", (clean_email,))
+            row = cur.fetchone()
+            if row:
+                user_doc = dict(row)
+        finally:
+            conn.close()
+
+    if not user_doc:
+        return None
+
+    return _sanitize_user(user_doc)
+
+
+def update_user_last_login(email: str, timestamp_iso: Optional[str] = None) -> bool:
+    """Update last login timestamp for user across MongoDB Atlas and SQLite."""
+    if not email:
+        return False
+    clean_email = email.strip().lower()
+    now_iso = timestamp_iso or datetime.datetime.now().isoformat()
+
+    if _db_status["atlas_connected"] and _mongo_db is not None:
+        try:
+            _mongo_db["users"].update_one(
+                {"email": clean_email},
+                {"$set": {"last_login": now_iso}}
+            )
+        except Exception as e:
+            logger.warning(f"[Database] Atlas last_login update error: {e}")
+
+    conn = get_sqlite_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("UPDATE users SET last_login = ? WHERE LOWER(email) = ?", (now_iso, clean_email))
+        conn.commit()
+    finally:
+        conn.close()
+
+    return True
+
+
+def authenticate_user(email: str, password: str) -> Optional[Dict[str, Any]]:
+    """Verify credentials and return user info if authentic."""
+    clean_email = email.strip().lower()
+    user_doc = None
+
+    # Try MongoDB Atlas first
+    if _db_status["atlas_connected"] and _mongo_db is not None:
+        try:
+            user_doc = _mongo_db["users"].find_one({"email": clean_email})
+        except Exception as e:
+            logger.warning(f"[Auth] Atlas lookup error: {e}")
+
+    # Fallback to SQLite
+    if not user_doc:
+        conn = get_sqlite_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT * FROM users WHERE LOWER(email) = ?", (clean_email,))
+            row = cur.fetchone()
+            if row:
+                user_doc = dict(row)
+        finally:
+            conn.close()
+
+    if not user_doc:
+        return None
+
+    # Verify password hash
+    stored_hash = user_doc.get("password_hash") or ""
+    if not verify_password(password, stored_hash):
+        return None
+
+    # Update last login timestamp
+    now_iso = datetime.datetime.now().isoformat()
+    if _db_status["atlas_connected"] and _mongo_db is not None:
+        try:
+            _mongo_db["users"].update_one(
+                {"email": clean_email},
+                {"$set": {"last_login": now_iso}}
+            )
+        except Exception:
+            pass
+
+    conn = get_sqlite_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("UPDATE users SET last_login = ? WHERE LOWER(email) = ?", (now_iso, clean_email))
+        conn.commit()
+    finally:
+        conn.close()
+
+    user_doc["last_login"] = now_iso
+    return _sanitize_user(user_doc)
+
+
+def create_user_session(user_id: str, days: int = 7) -> str:
+    """Generate and store an active session token in MongoDB and SQLite."""
+    token = secrets.token_hex(32)
+    now = datetime.datetime.now()
+    expires_at = (now + datetime.timedelta(days=days)).isoformat()
+    now_iso = now.isoformat()
+
+    session_doc = {
+        "token": token,
+        "user_id": user_id,
+        "created_at": now_iso,
+        "expires_at": expires_at
+    }
+
+    # Save to MongoDB Atlas
+    if _db_status["atlas_connected"] and _mongo_db is not None:
+        try:
+            _mongo_db["sessions"].insert_one(session_doc)
+        except Exception as e:
+            logger.warning(f"[Session] Failed to persist in Atlas: {e}")
+
+    # Save to SQLite
+    conn = get_sqlite_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+        INSERT INTO sessions (token, user_id, created_at, expires_at)
+        VALUES (?, ?, ?, ?)
+        """, (token, user_id, now_iso, expires_at))
+        conn.commit()
+    finally:
+        conn.close()
+
+    return token
+
+
+def validate_session(token: str) -> Optional[Dict[str, Any]]:
+    """Validate token and return active user profile."""
+    if not token or len(token) < 16:
+        return None
+
+    now_iso = datetime.datetime.now().isoformat()
+    user_id = None
+
+    # Try MongoDB Atlas
+    if _db_status["atlas_connected"] and _mongo_db is not None:
+        try:
+            sess = _mongo_db["sessions"].find_one({"token": token, "expires_at": {"$gt": now_iso}})
+            if sess:
+                user_id = sess.get("user_id")
+        except Exception as e:
+            logger.warning(f"[Session] Atlas lookup failed: {e}")
+
+    # Fallback to SQLite
+    if not user_id:
+        conn = get_sqlite_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT user_id FROM sessions WHERE token = ? AND expires_at > ?", (token, now_iso))
+            row = cur.fetchone()
+            if row:
+                user_id = row[0]
+        finally:
+            conn.close()
+
+    if not user_id:
+        return None
+
+    # Fetch user doc
+    user_doc = None
+    if _db_status["atlas_connected"] and _mongo_db is not None:
+        try:
+            user_doc = _mongo_db["users"].find_one({"id": user_id})
+        except Exception:
+            pass
+
+    if not user_doc:
+        conn = get_sqlite_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+            row = cur.fetchone()
+            if row:
+                user_doc = dict(row)
+        finally:
+            conn.close()
+
+    return _sanitize_user(user_doc) if user_doc else None
+
+
+def revoke_session(token: str) -> bool:
+    """Revoke/delete an active session token."""
+    if not token:
+        return True
+
+    if _db_status["atlas_connected"] and _mongo_db is not None:
+        try:
+            _mongo_db["sessions"].delete_one({"token": token})
+        except Exception:
+            pass
+
+    conn = get_sqlite_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM sessions WHERE token = ?", (token,))
+        conn.commit()
+    finally:
+        conn.close()
+
+    return True
+
+
+def generate_password_reset_token(email: str) -> Optional[str]:
+    """Generate a password recovery token valid for 60 minutes."""
+    clean_email = email.strip().lower()
+    token = secrets.token_urlsafe(32)
+    expiry = (datetime.datetime.now() + datetime.timedelta(minutes=60)).isoformat()
+
+    found = False
+    if _db_status["atlas_connected"] and _mongo_db is not None:
+        try:
+            res = _mongo_db["users"].update_one(
+                {"email": clean_email},
+                {"$set": {"reset_token": token, "reset_token_expiry": expiry}}
+            )
+            found = res.matched_count > 0
+        except Exception:
+            pass
+
+    conn = get_sqlite_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("UPDATE users SET reset_token = ?, reset_token_expiry = ? WHERE LOWER(email) = ?", (token, expiry, clean_email))
+        conn.commit()
+        if cur.rowcount > 0:
+            found = True
+    finally:
+        conn.close()
+
+    return token if found else None
+
+
+def reset_password_with_token(token_or_email: str, new_password: str) -> bool:
+    """Update password using reset token or verified email."""
+    if not new_password or len(new_password) < 6:
+        raise ValueError("Password must be at least 6 characters.")
+
+    p_hash = hash_password(new_password)
+    now_iso = datetime.datetime.now().isoformat()
+    updated = False
+
+    # Check MongoDB Atlas
+    if _db_status["atlas_connected"] and _mongo_db is not None:
+        try:
+            res = _mongo_db["users"].update_one(
+                {
+                    "$or": [
+                        {"reset_token": token_or_email, "reset_token_expiry": {"$gt": now_iso}},
+                        {"email": token_or_email.strip().lower()}
+                    ]
+                },
+                {
+                    "$set": {"password_hash": p_hash, "reset_token": None, "reset_token_expiry": None}
+                }
+            )
+            updated = res.matched_count > 0
+        except Exception:
+            pass
+
+    # Check SQLite
+    conn = get_sqlite_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+        UPDATE users 
+        SET password_hash = ?, reset_token = NULL, reset_token_expiry = NULL
+        WHERE (reset_token = ? AND reset_token_expiry > ?) OR LOWER(email) = ?
+        """, (p_hash, token_or_email, now_iso, token_or_email.strip().lower()))
+        conn.commit()
+        if cur.rowcount > 0:
+            updated = True
+    finally:
+        conn.close()
+
+    return updated
+
