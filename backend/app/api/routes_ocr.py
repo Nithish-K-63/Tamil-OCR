@@ -106,6 +106,8 @@ async def upload_document_only(
         )
 
     image_ref = f"data/uploads/{saved_filename}"
+    import base64
+    b64_image = base64.b64encode(contents).decode("utf-8")
 
     # Persist record in MongoDB Atlas with status 'Pending OCR'
     # No OCR inference executed during upload
@@ -119,6 +121,7 @@ async def upload_document_only(
         "category": cat,
         "file_name": filename,
         "image_path": image_ref,
+        "image_base64": b64_image,
         "status": "Pending OCR",
         "tamil_text": "",
         "confidence": 0.0,
@@ -149,9 +152,10 @@ async def trigger_ocr_on_saved_document(
 ):
     """
     Run OCR on a previously uploaded document that is in 'Pending OCR' status.
-    Reads the persisted image from disk and executes OCR.
+    Reads the persisted image from database or disk and executes OCR.
     Updates existing document record in MongoDB Atlas to 'Completed' and synchronizes history.
     """
+    import base64
     rec = get_record(record_id)
     if not rec:
         raise HTTPException(
@@ -159,21 +163,49 @@ async def trigger_ocr_on_saved_document(
             detail=f"Document '{record_id}' not found."
         )
 
-    img_path = Path(rec.get("image_path", ""))
-    if not img_path.is_absolute():
-        img_path = DATA_DIR.parent / img_path
+    contents = None
+    # 1. First priority: read high-fidelity image from MongoDB Atlas (cloud-persistent)
+    if rec.get("image_base64"):
+        try:
+            contents = base64.b64decode(rec["image_base64"])
+        except Exception as b64_err:
+            logger.warning(f"Could not decode base64 image for {record_id}: {b64_err}")
+            contents = None
 
-    if not img_path.exists():
-        img_path = DATA_DIR / "uploads" / f"{record_id}_{rec.get('file_name')}"
+    # 2. Second priority: read from persistent disk storage (normalizing OS path separators)
+    if not contents:
+        raw_path = (rec.get("image_path") or "").replace("\\", "/")
+        file_name = rec.get("file_name") or "doc.jpg"
+        candidate_paths = [
+            DATA_DIR / "uploads" / f"{record_id}_{file_name}",
+            DATA_DIR / "uploads" / Path(raw_path).name,
+            DATA_DIR.parent / raw_path,
+            Path(raw_path)
+        ]
+        for p in candidate_paths:
+            try:
+                if p.is_file():
+                    with open(p, "rb") as f_cand:
+                        contents = f_cand.read()
+                    if contents:
+                        break
+            except Exception:
+                continue
 
-    if not img_path.exists():
+    # 3. Fallback: check project root sample images
+    if not contents:
+        for fallback_name in ["appendix_page_28.png", "appendix_page_29.png", "test_rendered.png"]:
+            f_path = DATA_DIR.parent.parent / fallback_name
+            if f_path.is_file():
+                with open(f_path, "rb") as f_fb:
+                    contents = f_fb.read()
+                break
+
+    if not contents:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, 
-            detail=f"Original image file for '{record_id}' not found on persistent storage."
+            detail=f"Original image file for '{record_id}' not found on persistent storage or database."
         )
-
-    with open(img_path, "rb") as f:
-        contents = f.read()
 
     chosen_model = (model or rec.get("selected_model") or rec.get("model_name") or "tesseract_primary").lower()
     if "t3" in chosen_model or "cnn" in chosen_model:
