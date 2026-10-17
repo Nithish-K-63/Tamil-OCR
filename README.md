@@ -1,332 +1,306 @@
 # TamilOCR (தமிழ்OCR) — Handwritten Script Recognition System for Government Archives
 
-> **Project Title**: Computer Vision-Based Handwritten Tamil Script Recognition System for Digitizing Legacy Government Records  
+> **Project Title**: Computer Vision & Deep Learning-Based Handwritten Tamil Script Recognition System for Digitizing Legacy Government Records  
 > **Version**: 2.4.0  
 > **Domain**: Digital Governance, Historical Archives Preservation & Document AI  
+> **Live Production Portal**: [https://tamilocr-tau.vercel.app](https://tamilocr-tau.vercel.app)  
+> **Backend API Gateway**: [https://tamil-ocr-ymob.onrender.com](https://tamil-ocr-ymob.onrender.com)  
 
 ---
 
 ## 1. System Overview
 
-**TamilOCR** is an enterprise-grade full-stack computer vision and deep learning platform built to digitize, transcribe, and index legacy Tamil handwritten government documents, land records (*பட்டா / சிட்டா*), revenue deeds, and municipal archives.
+**TamilOCR** is an enterprise-grade full-stack computer vision and deep learning platform built to digitize, transcribe, search, and preserve legacy Tamil handwritten government documents, land records (*பட்டா / சிட்டா*), revenue deeds, and historical municipal archives.
 
-The system bridges computer vision preprocessing algorithms with a customized Deep Convolutional Neural Network (**TamilCNN / T3.7 Indic Recognition Architecture**) trained on 156 standardized Tamil glyph classes, delivering canonical NFC Unicode text transcription with **97.30% Top-1 validation accuracy**.
+The system combines advanced OpenCV image preprocessing algorithms with a multi-model OCR engine suite — including a native **Tesseract OCR Engine (`lang='tam'`)**, a specialized Deep Convolutional Neural Network (**TamilCNN / T3.7 Indic Recognition Architecture**) trained on 156 standardized Tamil glyph classes (**97.30% Top-1 validation accuracy**), and **Bodhan Indic-OCR**.
 
 ---
 
-## 2. Key Features
+## 2. Live Cloud Deployment Architecture
 
-- **Document Ingestion & Multi-Format Support**: Upload high-resolution scans and photographs (`.jpg`, `.jpeg`, `.png`, `.webp`, `.tiff`, `.bmp`) up to 15 MB.
-- **Adaptive Computer Vision Pipeline**:
-  1. **Adaptive Deskewing**: Automatic angle estimation using minimum area bounding boxes and bilinear rotation.
-  2. **Image Enhancement & Denoising**: CLAHE (Contrast Limited Adaptive Histogram Equalization) and bilateral filtering to eliminate aged parchment stains while preserving delicate pen strokes.
-  3. **Non-Destructive Binarization**: Dual Otsu thresholding with binarized mask toggle for visual inspection.
-  4. **Projection Profile Line Segmentation**: Horizontal density projection to extract distinct handwritten text lines.
-  5. **Diacritic & Pulli-Aware Glyph Grouping**: Connected component analysis that merges floating dots (*புள்ளி*) and vowel modifiers (*கொம்பு, கால்*) with base consonants.
-- **Deep CNN Classifier (TamilCNN T3.7)**:
-  - 156 character classes covering independent vowels, Ayutham, pure consonants, base consonants, ligatures, and Grantha characters.
-  - 2,566,012 parameters; pretrained weights achieving **97.30% Top-1 validation accuracy**.
-- **Unicode Recomposition Engine**:
-  - Recomposes split visual glyphs (e.g., *ஒற்றைக் கொம்பு* `ெ` + consonant + *கால்* `ா` into `ொ`).
-  - Implements canonical NFC normalization and Open-Tamil character boundary alignment.
-- **Government Records Archive & Dual Database**:
-  - MongoDB Atlas cloud database support with resilient local SQLite fallback via `aiosqlite`/`sqlite3`.
-  - Full audit metadata (Department, District, Year, Confidence Score, Record ID).
-  - Searchable historical archive and aggregate portal dashboard analytics.
-- **Bilingual & Responsive Interface**:
-  - Full Tamil and English localization (*தமிழ் / English*).
-  - Dark / Light theme support.
-  - Interactive transcription editor, text export, clipboard copy, and visual bounding box overlays.
+```mermaid
+graph TD
+  User([Official Officer / Researcher Browser])
+  
+  subgraph Vercel ["Vercel Edge Network (Frontend)"]
+    VercelUI[React 19 + Vite 8 SPA]
+    VercelProxy[vercel.json Reverse Proxy /api/*]
+  end
+
+  subgraph Render ["Render Cloud (FastAPI Backend)"]
+    FastAPI[FastAPI Async REST API]
+    AuthEngine[Auth & Session Engine PBKDF2]
+    
+    subgraph OCREngines ["Multi-Model OCR Pipeline"]
+      TessEngine["1. Tesseract OCR (lang='tam')"]
+      TamilCNN["2. TamilCNN T3.7 (156 Classes - 97.3%)"]
+      BodhanEngine["3. Bodhan Indic-OCR (Cloud API)"]
+    end
+    
+    AIEngine[TamilOCR AI Archival Assistant]
+  end
+
+  subgraph CloudData ["Persistent Cloud Services"]
+    Atlas[(MongoDB Atlas Cluster)]
+    SQLite[(SQLite Resilient Fallback)]
+    SMTP[SMTP Mailer: Activation & Verification]
+  end
+
+  User -->|HTTPS UI Requests| VercelUI
+  VercelUI -->|/api/* Requests| VercelProxy
+  VercelProxy -->|Reverse Proxy| FastAPI
+  FastAPI --> AuthEngine
+  FastAPI --> OCREngines
+  FastAPI --> AIEngine
+  FastAPI --> Atlas
+  Atlas -.->|Offline Fallback| SQLite
+  AuthEngine --> SMTP
+```
 
 ---
 
 ## 3. Technology Stack
 
 ### Frontend
-- **Framework**: React 19 + TypeScript
-- **Bundler & Dev Server**: Vite 8 with `@vitejs/plugin-react`
+- **Framework**: React 19 + TypeScript + JSX
+- **Build Tool & Bundler**: Vite 8 with `@vitejs/plugin-react`
 - **Styling**: Tailwind CSS v4 via `@tailwindcss/vite`
+- **Routing**: React Router DOM v7 (Clean SPA routing with `vercel.json` rewrites)
 - **Icons**: Lucide React
-- **Routing**: React Router DOM v7
+- **Hosting**: Vercel Edge Network
 
 ### Backend & Machine Learning
-- **Framework**: FastAPI 0.115+ (Asynchronous REST API)
+- **Framework**: FastAPI 0.115+ (Asynchronous ASGI REST API)
 - **ASGI Server**: Uvicorn 0.30+
-- **Deep Learning**: PyTorch 2.2+ (CPU & CUDA compatible)
-- **Computer Vision**: OpenCV (`opencv-python` 4.10+), NumPy, Pillow
-- **Language & Post-Processing**: Open-Tamil 1.1+, unicodedata
-- **Evaluation**: jiwer 3.0+ (CER / WER metrics)
-- **Database**: MongoDB Atlas Cloud (`pymongo`) with automatic SQLite 3 fallback (`aiosqlite`)
+- **Deep Learning**: PyTorch 2.2+ (CPU & CUDA compatible with memory-safe chunked batching)
+- **Computer Vision**: OpenCV (`opencv-python` 4.10+), Pillow (`PIL`), NumPy
+- **OCR Engines**:
+  - `pytesseract` with Tamil Language Pack (`tam.traineddata`)
+  - Standalone `TamilCNN` 4-ConvBlock 156-class classifier
+  - Bodhan Indic-OCR Cloud Service
+- **Language & Post-Processing**: Open-Tamil 1.1+, Python standard `unicodedata` (Canonical NFC Normalization)
+- **Database**: Dual Engine — **MongoDB Atlas** (`pymongo`, `dnspython`) with automated local **SQLite 3** fallback (`aiosqlite`)
+- **Hosting**: Render Cloud (Linux / Python 3.12)
 
 ---
 
-## 4. Project Directory Structure
+## 4. End-to-End OCR Processing Workflow
+
+The digitization pipeline processes handwritten records through 5 robust stages:
+
+```mermaid
+flowchart LR
+  A[1. Document Ingestion] --> B[2. Computer Vision Preprocessing]
+  B --> C[3. Text-Line & Glyph Segmentation]
+  C --> D[4. Multi-Model OCR Inference]
+  D --> E[5. Unicode Recomposition & Archival Indexing]
+```
+
+### Stage 1: Document Ingestion
+- Accepts high-resolution scans and camera photographs (`.jpg`, `.jpeg`, `.png`, `.webp`, `.tiff`, `.bmp`) up to 15 MB.
+- Stores metadata (Title, Department, Year, District, Category) and persists image in MongoDB Atlas as base64 to guarantee availability across ephemeral cloud container restarts.
+
+### Stage 2: Computer Vision Preprocessing
+1. **Adaptive Deskewing**: Estimates skew angle using minimum bounding area moments and applies bilinear rotation correction.
+2. **CLAHE Contrast Equalization**: Boosts faint historical ink strokes while suppressing parchment discoloration.
+3. **Adaptive Denoising**: Removes speckles and paper grain using fast non-local means (`fastNlMeansDenoising`).
+4. **Non-Destructive Binarization**: Dual Otsu thresholding combined with adaptive local Gaussian thresholding.
+5. **Dynamic Downscaling**: Caps maximum image dimension at 1600px to maintain high OCR character resolution while staying safely within 512MB RAM constraints on cloud tiers.
+
+### Stage 3: Text-Line & Glyph Segmentation
+- **Horizontal Projection Profile (HPP)**: Segments text lines by identifying inter-line spacing valleys.
+- **Diacritic-Aware Component Grouping**: Merges floating dots (*புள்ளி*), secondary vowel signs (*கொம்பு, கால்*), and ligatures with base consonants to prevent fragmented recognition.
+
+### Stage 4: Multi-Model OCR Inference
+- **Primary Engine**: **Tesseract OCR (lang='tam')** with LSTM neural net models.
+- **Secondary Engine**: **TamilCNN (T3.7 Indic Recognition Architecture)**:
+  - 4 Conv2d blocks (32, 64, 128, 256 filters) with BatchNorm, ReLU, and MaxPool.
+  - Linear classifier with Dropout (`p=0.5`).
+  - Pretrained on 156 Tamil character classes with **97.30% Top-1 validation accuracy**.
+  - **Memory-Safe Batching**: Infers character patches in batches of 32 with explicit tensor cleanup to eliminate memory exhaustion.
+- **Third Engine**: **Bodhan Indic-OCR** for cloud-assisted comparison.
+- **Resilient Fallback**: If the host environment lacks system Tesseract binaries, the system automatically routes documents through TamilCNN without returning blank text.
+
+### Stage 5: Unicode Recomposition & Archival Indexing
+- **Logical Recomposition**: Reconstructs valid Tamil Unicode glyph sequences (e.g. *ஒற்றைக் கொம்பு* `ெ` + consonant + *கால்* `ா` into `ொ`).
+- **Canonical Normalization**: Standardizes text to Unicode NFC format.
+- **Database Indexing**: Records OCR results, word/character counts, confidence ratings, and bounding boxes in MongoDB Atlas for instant full-text search.
+
+---
+
+## 5. Authentication & Security Engine
+
+TamilOCR implements secure government-grade access controls:
+
+- **Email-Based Officer Registration**:
+  - Validates legal name, department, official email, and password.
+  - Sends verification emails via SMTP with 24-hour cryptographic URL tokens.
+  - Accounts remain `pending_verification` until activated via verification link.
+- **Secure Password Hashing**: Salted PBKDF2 with SHA-256 (310,000 iterations).
+- **Google Cloud OAuth 2.0**: Direct Google Identity Services authorization code exchange with replay protection.
+- **Session Security**: Cryptographically secure bearer tokens with configurable expiration (30 days for "Remember Me", 2 days for standard sessions).
+- **Graceful Unconfigured Mode**: If SMTP credentials are not present in `.env`, the system provides testing verification links with diagnostic instructions instead of failing silently.
+
+---
+
+## 6. Project Directory Structure
 
 ```text
 TamilOCR Web Application/
 ├── backend/
 │   ├── app/
-│   │   ├── api/                     # REST API route handlers
+│   │   ├── api/                     # REST API Route Handlers
+│   │   │   ├── routes_auth.py       # Authentication, registration, email verify, password reset
+│   │   │   ├── routes_chat.py       # Archival AI Assistant chat endpoints
 │   │   │   ├── routes_dashboard.py  # Portal statistics & aggregation
-│   │   │   ├── routes_health.py     # Liveness & model load state
-│   │   │   ├── routes_history.py    # Paginated archive CRUD operations
-│   │   │   └── routes_ocr.py        # Single & batch OCR inference
-│   │   ├── models/                  # PyTorch model definitions & engine
-│   │   │   ├── ocr_engine.py        # End-to-end OCR pipeline coordinator
-│   │   │   ├── t37_model.py         # TamilCNN 4-ConvBlock architecture
-│   │   │   └── tamil_charset.py     # 156 standardized Tamil character classes
+│   │   │   ├── routes_health.py     # Liveness, readiness & database diagnostic status
+│   │   │   ├── routes_history.py    # Paginated archive CRUD operations & export
+│   │   │   └── routes_ocr.py        # Upload, multi-model OCR processing & batch inference
+│   │   ├── models/                  # OCR Engine implementations
+│   │   │   ├── bodhan_ocr_engine.py # Bodhan Indic-OCR client
+│   │   │   ├── indic_ocr_engine.py  # Indic OCR adapter
+│   │   │   ├── ocr_engine.py        # End-to-end TamilCNN inference coordinator
+│   │   │   ├── t37_model.py         # PyTorch TamilCNN architecture & model loader
+│   │   │   ├── tamil_charset.py     # 156 standardized Tamil character classes
+│   │   │   └── tesseract_engine.py  # Cross-platform Tesseract engine with CNN fallback
 │   │   ├── services/
-│   │   │   └── preprocessing.py     # OpenCV deskew, denoising & segmentation
-│   │   ├── config.py                # Service configuration & environment vars
-│   │   ├── database.py              # SQLite schema & persistence helpers
-│   │   └── main.py                  # FastAPI application entrypoint & lifespan
+│   │   │   ├── chat_service.py      # Domain AI assistant service
+│   │   │   ├── email_service.py     # SMTP verification & notification engine
+│   │   │   └── preprocessing.py     # OpenCV deskew, CLAHE, denoising & line segmentation
+│   │   ├── config.py                # Environment configuration loader
+│   │   ├── database.py              # MongoDB Atlas + SQLite dual persistence engine
+│   │   └── main.py                  # FastAPI application entrypoint & CORS middleware
 │   ├── checkpoints/                 # Pretrained neural network weights
-│   │   └── tamil_best.pth           # 97.30% val acc checkpoint (30.8 MB)
-│   ├── data/                        # Dataset tools & evaluation benchmarks
-│   ├── requirements.txt             # Python runtime dependencies
-│   └── tamil_ocr.db                 # SQLite database file
+│   │   └── tamil_best.pth           # 97.30% val acc checkpoint
+│   ├── data/                        # Uploads directory and dataset tools
+│   ├── tessdata/                    # Tamil traineddata language pack
+│   │   └── tam.traineddata          # Official Tesseract Tamil language model
+│   ├── Dockerfile                   # Production Docker container for Render / Cloud
+│   └── requirements.txt             # Python runtime dependencies
 ├── frontend/
 │   └── src/
 │       ├── api/
-│       │   └── ocrApi.js            # Frontend API client with proxy fallback
-│       ├── components/              # Sidebar, navigation & shared UI cards
-│       ├── context/                 # ThemeContext & LanguageContext
-│       └── pages/                   # Main views
-│           ├── Dashboard.jsx        # Digitization portal overview & metrics
-│           ├── DocumentUpload.jsx   # Document drag-and-drop & metadata form
-│           ├── OCRProcessing.jsx    # Live 4-stage pipeline tracker & error panel
-│           ├── RecognitionResults.jsx # Recognized text inspection & export
-│           ├── DigitizedRecords.jsx # Searchable record archive
-│           └── Settings.jsx         # Engine configuration & model thresholding
-├── public/                          # Static assets, logos & sample images
-├── src/                             # Vite React bootstrap entrypoint
-│   ├── App.tsx                      # Root application router
-│   ├── index.css                    # Tailwind CSS v4 styling rules
-│   └── main.tsx                     # React root mount
-├── package.json                     # Node.js dependencies & scripts
-├── vite.config.ts                   # Vite config with backend manager plugin & proxy
-└── README.md                        # Project documentation (this file)
+│       │   ├── authApi.js           # Authentication API client with 45s cloud timeout
+│       │   └── ocrApi.js            # OCR API client with reverse proxy & Render fallback
+│       ├── components/              # UI components (Sidebar, Navbar, AIAssistant, Viewer)
+│       ├── context/                 # AuthContext, ThemeContext, LanguageContext
+│       └── pages/                   # Application pages
+│           ├── LandingPage.jsx      # Portal homepage with heritage theme
+│           ├── Login.jsx            # Sign-in with Email & Google OAuth
+│           ├── Register.jsx         # Officer registration & SMTP diagnostic screen
+│           ├── VerifyEmail.jsx      # Email token verification & activation
+│           ├── Dashboard.jsx        # Digitization overview & statistics
+│           ├── DocumentUpload.jsx   # Document upload & metadata assignment
+│           ├── OCRProcessing.jsx    # Live 4-stage pipeline tracker
+│           ├── RecognitionResults.jsx # Recognized Tamil text inspection & export
+│           ├── DigitizedRecords.jsx # Historical archive with search & filtering
+│           └── Settings.jsx         # Engine settings & model comparison
+├── render.yaml                      # Render Blueprint deployment definition
+├── vercel.json                      # Vercel reverse proxy & SPA routing rewrites
+└── package.json                     # Root Vite & NPM workspace configuration
 ```
 
 ---
 
-## 5. Getting Started & Installation
+## 7. REST API Reference
 
-### Prerequisites
-- **Python**: 3.10, 3.11, or 3.12 installed and added to `PATH`
-- **Node.js**: v18.0.0 or higher
-- **pnpm** or **npm**
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/health` | Service liveness, loaded OCR model, and MongoDB Atlas connectivity status. |
+| `POST` | `/api/auth/register` | Register an officer account, hash password with PBKDF2, generate verification token, and send activation email. |
+| `POST` | `/api/auth/login` | Authenticate officer credentials and issue session bearer token. |
+| `POST` | `/api/auth/verify-email` | Validate cryptographic token and activate account. |
+| `POST` | `/api/auth/resend-verification` | Generate new activation token and resend verification email. |
+| `POST` | `/api/auth/forgot-password` | Generate password reset token. |
+| `POST` | `/api/auth/reset-password` | Set new password with valid reset token. |
+| `POST` | `/api/documents/upload` | Upload manuscript scan, validate dimensions, and persist in database. |
+| `POST` | `/api/documents/{id}/process-ocr` | Run OCR using selected model (**Tesseract**, **TamilCNN**, or **Indic-OCR**) and save recognized text. |
+| `GET` | `/api/dashboard/stats` | Aggregate digitization counts, monthly timeline, and confidence distributions. |
+| `GET` | `/api/history` | Paginated search of digitized records with department/district filters. |
+| `POST` | `/api/chat` | AI Archival Assistant query with domain knowledge and conversational history. |
 
-### Step 1: Install Python Dependencies
+---
+
+## 8. Deployment Guide
+
+### Deploying Backend on Render
+1. Create a new **Web Service** on [render.com](https://render.com).
+2. Connect your repository (`Tamil-OCR`).
+3. Set the following build settings:
+   - **Environment**: `Python 3`
+   - **Root Directory**: `backend`
+   - **Build Command**:
+     ```bash
+     pip install --upgrade pip && pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu && pip install -r requirements.txt
+     ```
+   - **Start Command**:
+     ```bash
+     uvicorn app.main:app --host 0.0.0.0 --port $PORT
+     ```
+4. Add Environment Variables:
+   - `PYTHON_VERSION`: `3.12.0`
+   - `MONGODB_URI`: `mongodb+srv://...`
+   - `MONGODB_DB_NAME`: `tamilocr_db`
+   - `CORS_ORIGINS`: `*`
+   - `DEVICE`: `cpu`
+   - `CONFIDENCE_THRESHOLD`: `80.0`
+
+### Deploying Frontend on Vercel
+1. Import repository on [vercel.com](https://vercel.com).
+2. Set **Framework Preset** to `Vite`.
+3. The included [`vercel.json`](file:///c:/Users/Nithish/Downloads/TamilOCR%20Web%20Application/vercel.json) automatically proxies all `/api/*` requests directly to your Render backend:
+   ```json
+   {
+     "rewrites": [
+       {
+         "source": "/api/:path*",
+         "destination": "https://tamil-ocr-ymob.onrender.com/api/:path*"
+       },
+       {
+         "source": "/(.*)",
+         "destination": "/index.html"
+       }
+     ]
+   }
+   ```
+4. Click **Deploy**. Vercel will build and serve the application globally.
+
+---
+
+## 9. Local Development Setup
+
+### 1. Prerequisites
+- Python 3.10, 3.11, or 3.12
+- Node.js 18+ and npm / pnpm
+- Git
+
+### 2. Backend Setup
 ```bash
 cd backend
+python -m venv venv
+# Windows:
+venv\Scripts\activate
+# Linux/macOS:
+source venv/bin/activate
+
 pip install -r requirements.txt
-cd ..
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-### Step 2: Install Node Dependencies
+### 3. Frontend Setup
 ```bash
+# In project root:
 npm install
-# or: pnpm install
-```
-
-### Step 3: Run the Application
-
-#### Option A: Single-Command Launch (Recommended)
-The Vite configuration includes a supervisor plugin (`backendManagerPlugin`) that automatically checks if the backend is active at `http://127.0.0.1:8000/api/health`. If not running, it automatically spawns the Python Uvicorn service:
-
-```bash
 npm run dev
 ```
 
-Open your browser at `http://localhost:3000` (or the configured `$PORT`).
-
-#### Option B: Run Services Separately
-
-**Terminal 1 — Python Inference Backend:**
-```bash
-npm run backend
-# or:
-cd backend
-python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
-```
-Backend Swagger Documentation will be available at: `http://localhost:8000/docs`
-
-**Terminal 2 — Frontend Development Server:**
-```bash
-npm run dev
-```
+The frontend will start on `http://localhost:3000` with hot module replacement and automatic proxying to backend port 8000.
 
 ---
 
-## 6. Pipeline Architecture: 4 Processing Stages
+## 10. License & Credits
 
-When a manuscript is submitted for recognition, it traverses four sequential processing stages:
-
-```
-[Uploaded Image]
-       │
-       ▼
- Stage 1: Adaptive Binarization & Deskewing
-   • Computes minimum area bounding box to calculate skew angle θ
-   • Applies CLAHE (ClipLimit=2.0, Grid=8x8) and bilateral filtering
-   • Otsu non-destructive thresholding creates high-contrast binary mask
-       │
-       ▼
- Stage 2: Layout & Text Line Segmentation
-   • Horizontal projection profile detects text baselines and inter-line valleys
-   • Bounding box line slicing (minimum line height: 12px)
-   • Contour analysis extracts individual candidate glyph bounding boxes
-       │
-       ▼
- Stage 3: Deep TamilCNN Script Recognition
-   • Patches are aspect-ratio preserved, centered, and scaled to 64x64 pixels
-   • Normalized tensor is passed to 4 Conv2d blocks + Dense Classifier
-   • Softmax inference outputs top class index (0–155) and confidence score
-       │
-       ▼
- Stage 4: Unicode Reconstruction & Post-Processing
-   • Inter-character spacing analysis inserts word delimiters
-   • Recomposition logic merges pre-vowel signs (ெ, ே, ை) and post-vowel Kaal (ா)
-   • NFC canonical Unicode normalization produces standard Tamil script
-       │
-       ▼
-[Final Digitized Output & Archive Entry]
-```
-
----
-
-## 7. API Reference
-
-### Health & Metadata
-
-#### `GET /api/health`
-Returns service availability, version, and loaded neural model status.
-```json
-{
-  "status": "online",
-  "service": "TamilOCR Government Archive Digitization Engine",
-  "version": "2.4.0",
-  "model_loaded": true,
-  "model_name": "TamilCNN (T3.7 Indic Recognition Architecture)",
-  "validation_accuracy": 97.2991,
-  "device": "cpu"
-}
-```
-
-#### `GET /api/model-info`
-Returns neural network topology, parameter counts, and benchmark accuracy metrics.
-
----
-
-### OCR Inference
-
-#### `POST /api/ocr`
-Uploads a single handwritten document and performs end-to-end recognition.
-
-- **Content-Type**: `multipart/form-data`
-- **Parameters**:
-  - `file`: Document image file (`.jpg`, `.png`, `.webp`, `.tiff`, etc.)
-  - `title` *(optional)*: Archive document title (e.g., `நிலப் பதிவு ஆவணம் - 1978`)
-  - `department` *(optional)*: Department (e.g., `Revenue Department`)
-  - `year` *(optional)*: Document year (e.g., `1978`)
-  - `district` *(optional)*: District (e.g., `Thanjavur`)
-
-**Sample Response**:
-```json
-{
-  "success": true,
-  "recordId": "TNOCR-A1B2",
-  "jobId": "JOB-TNOCR-A1B2",
-  "fileName": "land_record.jpg",
-  "tamilText": "தமிழ்நாடு அரசு வருவாய் மற்றும் பேரிடர் மேலாண்மைத் துறை...",
-  "confidenceScore": 96.4,
-  "linesCount": 8,
-  "wordsCount": 42,
-  "charCount": 218,
-  "inferenceTimeMs": 245.8,
-  "lines": ["தமிழ்நாடு அரசு", "வருவாய் மற்றும் பேரிடர் மேலாண்மைத் துறை..."],
-  "boundingBoxes": [
-    { "x": 12, "y": 8, "w": 24, "h": 28, "text": "த", "confidence": 98.2 }
-  ],
-  "preprocessing": {
-    "deskew_angle": -1.2,
-    "dimensions": "1024x768",
-    "lines_detected": 8,
-    "characters_detected": 218
-  }
-}
-```
-
-#### `POST /api/ocr/batch`
-Performs batch recognition for up to 20 documents simultaneously.
-
----
-
-### Archive & Analytics
-
-#### `GET /api/history`
-Retrieves paginated archive records from the SQLite database.
-- **Query Parameters**: `limit` (default: 50), `offset` (default: 0), `search` (optional)
-
-#### `GET /api/history/{id}`
-Retrieves a specific archive record by ID.
-
-#### `DELETE /api/history/{id}`
-Deletes an archive record by ID.
-
-#### `GET /api/dashboard/stats`
-Returns aggregated digitization statistics (total documents, average confidence, high-confidence ratio, department distributions).
-
----
-
-## 8. Model Architecture & Benchmarks
-
-The core recognition model is based on the **T3.7 Indic Recognition Architecture** trained on handwritten Tamil scripts (uTHCD dataset format):
-
-| Layer | Type | Specifications |
-|---|---|---|
-| **Block 1** | Conv2D + BatchNorm + ReLU + MaxPool | 1 $\to$ 32 channels, kernel 3×3, stride 1, pool 2×2 |
-| **Block 2** | Conv2D + BatchNorm + ReLU + MaxPool | 32 $\to$ 64 channels, kernel 3×3, stride 1, pool 2×2 |
-| **Block 3** | Conv2D + BatchNorm + ReLU + MaxPool | 64 $\to$ 128 channels, kernel 3×3, stride 1, pool 2×2 |
-| **Block 4** | Conv2D + BatchNorm + ReLU + MaxPool | 128 $\to$ 256 channels, kernel 3×3, stride 1, pool 2×2 |
-| **Dense 1** | Flatten + Linear + ReLU + Dropout | $4096 \to 512$ units, Dropout rate = 0.5 |
-| **Dense 2** | Linear (Classification Head) | $512 \to 156$ classes |
-
-### Validation Performance
-- **Parameters**: 2,566,012 (all trainable)
-- **Top-1 Validation Accuracy**: **97.30%**
-- **Top-5 Validation Accuracy**: **99.77%**
-- **Macro F1-Score**: **95.96%**
-- **Inference Latency**: ~35–60 ms per isolated line / ~1.5–3.2 s per full archival page (CPU)
-
----
-
-## 9. Troubleshooting & FAQ
-
-### 1. HTTP 502 Bad Gateway during OCR Inference
-- **Cause**: The Python FastAPI backend was not running when the request reached the Vite dev proxy.
-- **Fix**: The Vite dev server now includes an automated process supervisor that starts the backend automatically. Alternatively, run `npm run backend` in a separate terminal.
-
-### 2. PyTorch Torch Not Found or Version Conflict
-- Install standard CPU-only or CUDA PyTorch:
-  ```bash
-  pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
-  ```
-
-### 3. Port Conflicts (Port 8000 or 3000 in use)
-- The backend port can be modified via environment variable:
-  ```bash
-  PORT=8001 python -m uvicorn app.main:app --port 8001
-  ```
-- If changed, update the proxy target in `vite.config.ts`.
-
----
-
-## 10. License & Attribution
-
-Designed for government archives preservation, cultural heritage digitization, and document intelligence research.  
-Developed under the **Tamil Nadu Government Archives Digitization Initiative**.
-#   T a m i l - O C R  
- #   T a m i l - O C R  
- 
+- **Project Lead**: TamilOCR Engineering Team
+- **Benchmark Dataset**: HP-uTHCD (Handwritten Tamil Character Dataset)
+- **Deep CNN Architecture**: T3.7 Indic Recognition Architecture (`dhruv10050/t3-7-indic-recognition`)
+- **License**: MIT License — open for academic, cultural heritage, and administrative governance use.
