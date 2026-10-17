@@ -24,21 +24,40 @@ import pytesseract
 
 logger = logging.getLogger("TamilOCR.TesseractEngine")
 
+import shutil
+
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 TESSERACT_DIR = BASE_DIR / "tesseract_bin"
 LOCAL_TESS_EXE = TESSERACT_DIR / "tesseract.exe"
-LOCAL_TESSDATA = TESSERACT_DIR / "tessdata"
+LOCAL_TESSDATA = BASE_DIR / "tessdata"
+WINDOWS_TESSDATA = TESSERACT_DIR / "tessdata"
 
 
 def _configure_tesseract():
-    """Configures pytesseract command path and TESSDATA_PREFIX."""
-    if LOCAL_TESS_EXE.is_file():
+    """Configures pytesseract command path and TESSDATA_PREFIX cross-platform."""
+    if sys.platform == "win32" and LOCAL_TESS_EXE.is_file():
         pytesseract.pytesseract.tesseract_cmd = str(LOCAL_TESS_EXE)
-        logger.info("Configured local Tesseract binary: %s", LOCAL_TESS_EXE)
+        logger.info("Configured Windows local Tesseract binary: %s", LOCAL_TESS_EXE)
+    else:
+        # On Linux / Cloud: check system tesseract in PATH or standard linux locations
+        system_tess = (
+            shutil.which("tesseract") or 
+            ("/usr/bin/tesseract" if Path("/usr/bin/tesseract").is_file() else None) or
+            ("/usr/local/bin/tesseract" if Path("/usr/local/bin/tesseract").is_file() else None)
+        )
+        if system_tess:
+            pytesseract.pytesseract.tesseract_cmd = system_tess
+            logger.info("Configured Linux system Tesseract binary: %s", system_tess)
+        else:
+            logger.info("No system Tesseract binary found on Linux. Tamil Deep CNN / Indic OCR will act as primary engine.")
     
-    if LOCAL_TESSDATA.is_dir():
+    # Configure TESSDATA_PREFIX (directory containing tam.traineddata)
+    if LOCAL_TESSDATA.is_dir() and (LOCAL_TESSDATA / "tam.traineddata").is_file():
         os.environ["TESSDATA_PREFIX"] = str(LOCAL_TESSDATA)
-        logger.info("Configured local TESSDATA_PREFIX: %s", LOCAL_TESSDATA)
+        logger.info("Configured TESSDATA_PREFIX from repo tessdata: %s", LOCAL_TESSDATA)
+    elif WINDOWS_TESSDATA.is_dir():
+        os.environ["TESSDATA_PREFIX"] = str(WINDOWS_TESSDATA)
+        logger.info("Configured TESSDATA_PREFIX from tesseract_bin: %s", WINDOWS_TESSDATA)
 
 
 _configure_tesseract()
@@ -72,8 +91,20 @@ class TesseractOCREngine:
         else:
             raise ValueError(f"Unsupported image input type: {type(image_input)}")
 
-        raw_text = pytesseract.image_to_string(img, lang=self.lang, config=config)
-        return clean_tamil_unicode_text(raw_text)
+        try:
+            raw_text = pytesseract.image_to_string(img, lang=self.lang, config=config)
+            cleaned = clean_tamil_unicode_text(raw_text)
+            if cleaned.strip():
+                return cleaned
+        except Exception as e:
+            logger.warning("pytesseract.image_to_string failed on current host: %s", e)
+
+        try:
+            from app.models.ocr_engine import get_ocr_engine
+            res = get_ocr_engine().recognize_image(img)
+            return res.get("text", "")
+        except Exception:
+            return ""
 
     def recognize_image(self, image_input: Union[bytes, str, Image.Image], filename: str = "document.jpg") -> Dict[str, Any]:
         """
@@ -184,6 +215,21 @@ class TesseractOCREngine:
             final_boxes = boxes_a
             final_confs = confs_a
             prep_meta["pass_selected"] = "preprocessed_enhanced"
+
+        # Step 3.5: Resilient Fallback to Tamil Deep CNN Engine
+        # If Tesseract produces no text (e.g. host environment lacks system Tesseract C++ binary),
+        # automatically process the image with the built-in PyTorch Deep CNN model.
+        if not final_text.strip():
+            logger.info("Tesseract produced empty text on current host. Activating Tamil Deep CNN fallback...")
+            try:
+                from app.models.ocr_engine import get_ocr_engine
+                cnn_engine = get_ocr_engine()
+                cnn_res = cnn_engine.recognize_image(image_input, filename=filename)
+                if cnn_res.get("text", "").strip():
+                    cnn_res["model_info"]["engine"] = "Tamil Deep CNN (Tesseract Host Fallback)"
+                    return cnn_res
+            except Exception as cnn_err:
+                logger.warning("Tamil Deep CNN fallback failed: %s", cnn_err)
 
         # Step 4: Metric Calculation
         lines = [line.strip() for line in final_text.splitlines() if line.strip()]
