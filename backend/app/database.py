@@ -64,27 +64,68 @@ SEED_RECORDS = [
         "district": "Thanjavur",
         "category": "Land Record",
         "status": "Verified",
-        "confidence": 94.8,
-        "char_count": 612,
-        "word_count": 84,
-        "lines_count": 11,
-        "tamil_text": """தமிழ்நாடு அரசு
+        "confidence": 97.68,
+        "char_count": 580,
+        "word_count": 78,
+        "lines_count": 14,
+        "tamil_text": """தமிழ்நாடு அரசு — வருவாய்த்துறை
 வருவாய் மற்றும் பேரிடர் மேலாண்மைத் துறை
 
 நிலப் பதிவு ஆவணம் - 1978
 
+பதிவு எண்: 452 / 1978
+நாள்: 12 செப்டம்பர் 1978
 மாவட்டம்: தஞ்சாவூர்
-வட்டம்: கும்பகோணம்
+வட்டம் / தாலுகா: கும்பகோணம்
 கிராமம்: சுந்தரபெருமாள் கோவில்
+நில வகைப்பாடு: நன்செய் விவசாய நிலம்
+சர்வே எண்: 108 / 3
+பரப்பளவு: 2 ஏக்கர் 43 சென்ட்
+பட்டா எண்: TR-78/914
+தீர்வை: ரூ. 28.50
 
-இவ்வாவணத்தில் குறிப்பிடப்பட்டுள்ள நிலத்தின் மொத்த பரப்பளவு இரண்டு ஏக்கர் மற்றும் நாற்பத்து மூன்று சென்ட் ஆகும். நில உரிமையாளர் திரு. சுப்பிரமணியன் த/பெ. இராமசாமி என்பவருக்கு பட்டா வழங்கப்படுகிறது.
+இவ்வாவணத்தின்படி, தஞ்சாவூர் மாவட்டம், கும்பகோணம் வட்டம், சுந்தரபெருமாள் கோவில் கிராமத்தில் அமைந்துள்ள மேற்கண்ட விபரமுடைய நன்செய் விவசாய நிலத்தின் உரிமை திரு. சுப்பிரமணியன் த/பெ. இராமசாமி என்பவருக்கு உறுதி செய்யப்பட்டு, தமிழ்நாடு நில வருவாய் சட்ட விதிகளின்படி புதிய பட்டா பதிவு செய்யப்படுகிறது.
 
-வட்டாட்சியர்
-கும்பகோணம்""",
+வட்டாட்சியர் / துணைப் பதிவாளர்
+கும்பகோணம், தஞ்சாவூர் மாவட்டம்""",
         "file_name": "land_record_1978.jpg",
-        "model_name": "T3.7-Indic-Tamil-CNN",
-        "processing_time_ms": 128.5,
+        "image_path": "data/uploads/land_record_1978.jpg",
+        "model_name": "Tesseract OCR (Primary Model - lang='tam')",
+        "processing_time_ms": 138.5,
         "created_at": datetime.datetime.now().isoformat()
+    },
+    {
+        "id": "TNOCR-0244",
+        "title": "கோவில் மானியப் பட்டா",
+        "department": "Endowments",
+        "year": "1959",
+        "district": "Thanjavur",
+        "category": "Deed",
+        "status": "Verified",
+        "confidence": 96.90,
+        "char_count": 520,
+        "word_count": 68,
+        "lines_count": 13,
+        "tamil_text": """திருவாவடுதுறை ஆதீனம் — அருள்மிகு பிரகதீஸ்வரர் திருக்கோவில்
+கோவில் மான்ய தான சாசனம் - 1959
+
+ஆவண எண்: 142 / 1959
+நாள்: அக்டோபர் 12, 1959 (தை 15)
+மாவட்டம்: தஞ்சாவூர்
+ஊர்: திருநாகேஸ்வரம்
+தானம் வழங்கியவர்: விஸ்வநாத அய்யர் த/பெ. சோமசுந்தரம் அய்யர்
+உரிமைப் பயன்: திருக்கோவில் நித்திய பூஜை கட்டளை
+நில உரிமை: ஐந்து மா நன்செய்
+
+இதன் மூலம் திருவாவடுதுறை ஆதீனம் அருள்மிகு பிரகதீஸ்வரர் திருக்கோவிலுக்கு தஞ்சாவூர் மாவட்டம், திருநாகேஸ்வரம் கிராமத்தில் அமைந்துள்ள ஐந்து மா நன்செய் விவசாய நிலம், சிவசுந்தரம் பிள்ளை அவர்களின் நற்பணி அறக்கட்டளை சார்பாக திரு. விஸ்வநாத அய்யர் அவர்களால் மனமுவந்து தானமாக வழங்கப்படுகிறது.
+
+District Collector & District Magistrate
+Thanjavur District""",
+        "file_name": "temple_grant_1959.jpg",
+        "image_path": "data/uploads/temple_grant_1959.jpg",
+        "model_name": "Tesseract OCR (Primary Model - lang='tam')",
+        "processing_time_ms": 125.0,
+        "created_at": (datetime.datetime.now() - datetime.timedelta(days=7)).isoformat()
     },
     {
         "id": "TNOCR-0247",
@@ -93,19 +134,29 @@ SEED_RECORDS = [
         "year": "1984",
         "district": "Madurai",
         "category": "Certificate",
-        "status": "Review",
-        "confidence": 87.2,
-        "char_count": 210,
-        "word_count": 32,
-        "lines_count": 6,
-        "tamil_text": """மதுரை மாநகராட்சி பிறப்பு பதிவு ஆவணம்.
-பதிவு எண்: 1984/MAD/0491
+        "status": "Verified",
+        "confidence": 97.26,
+        "char_count": 340,
+        "word_count": 48,
+        "lines_count": 10,
+        "tamil_text": """மதுரை மாநகராட்சி — MADURAI MUNICIPAL CORPORATION
+பிறப்பு பதிவு ஆவணம் — படிவம் எண். 5
+
+பதிவு எண்: 1984 / MAD / 0491
+பதிவு நாள்: 1984 ஆவணி 12 (18.06.1984)
 குழந்தையின் பெயர்: மருதுபாண்டி
+பாலினம்: ஆண்
+பிறந்த தேதி: 04.06.1984
+பிறந்த இடம்: மாநகராட்சி மகப்பேறு மருத்துவமனை, மதுரை
 தந்தை பெயர்: சொக்கலிங்கம்
 தாய் பெயர்: மீனாட்சி அம்மாள்
-பதிவு நாள்: 1984 ஆவணி 12""",
+வசிப்பிடம்: 14, வடக்கு மாசி வீதி, மதுரை
+
+கடைசிப் பதிவாளர் (ஆவணக் காப்பாளர்)
+மதுரை மாநகராட்சி""",
         "file_name": "birth_cert_1984.png",
-        "model_name": "T3.7-Indic-Tamil-CNN",
+        "image_path": "data/uploads/birth_cert_1984.png",
+        "model_name": "Tesseract OCR (Primary Model - lang='tam')",
         "processing_time_ms": 112.0,
         "created_at": (datetime.datetime.now() - datetime.timedelta(days=2)).isoformat()
     },
@@ -117,17 +168,29 @@ SEED_RECORDS = [
         "district": "Tiruchirappalli",
         "category": "Tax Record",
         "status": "Verified",
-        "confidence": 96.1,
-        "char_count": 380,
-        "word_count": 55,
-        "lines_count": 8,
-        "tamil_text": """திருச்சிராப்பள்ளி மாவட்ட வருவாய் தீர்வாயப் பதிவு.
+        "confidence": 97.15,
+        "char_count": 420,
+        "word_count": 58,
+        "lines_count": 11,
+        "tamil_text": """தமிழ்நாடு அரசு — வருவாய்த்துறை
+திருச்சிராப்பள்ளி மாவட்ட வருவாய் தீர்வாயப் பதிவு
+
 வருட கணக்கு: 1966
-நில உரிமையாளர்: நடராஜ பிள்ளை
-வரித் தொகை: ரூ. 42 அணா 6
-செலுத்தப்பட்ட நாள்: 1966 கார்த்திகை 20""",
+செலுத்தப்பட்ட நாள்: 1966 கார்த்திகை 20 (14-10-1966)
+மாவட்டம்: திருச்சிராப்பள்ளி
+தாலுகா: திருச்சிராப்பள்ளி
+கிராமம் / கதவு: 2/45, உறையூர்
+நில உரிமையாளர்: நடராஜ பிள்ளை த/பெ. முத்துசாமி
+வரிசை எண்: 28
+நில வகை: விவசாய நன்செய்
+பரப்பு: 0.75 ஏக்கர்
+வரித் தொகை: ரூ. 42 அணா 6 (செலுத்தப்பட்டது)
+
+வட்டாட்சியர் / கலெக்டர் ஒப்புதல்
+திருச்சிராப்பள்ளி மாவட்டம்""",
         "file_name": "tax_assessment_1966.jpg",
-        "model_name": "T3.7-Indic-Tamil-CNN",
+        "image_path": "data/uploads/tax_assessment_1966.jpg",
+        "model_name": "Tesseract OCR (Primary Model - lang='tam')",
         "processing_time_ms": 135.2,
         "created_at": (datetime.datetime.now() - datetime.timedelta(days=3)).isoformat()
     },
@@ -139,40 +202,30 @@ SEED_RECORDS = [
         "district": "Thanjavur",
         "category": "Land Record",
         "status": "Verified",
-        "confidence": 91.5,
-        "char_count": 420,
-        "word_count": 60,
-        "lines_count": 9,
-        "tamil_text": """காவிரி டெல்டா பாசன நில அளவைப் பதிவு.
+        "confidence": 97.40,
+        "char_count": 450,
+        "word_count": 62,
+        "lines_count": 12,
+        "tamil_text": """தமிழ்நாடு அரசு — பொதுப்பணித் துறை
+காவிரி டெல்டா பாசன நில அளவைப் பதிவு — 1972
+
 ஆண்டு: 1972
-பாசனக் கால்வாய்: வெண்ணாறு கிளை
-ஆயக்கட்டு நிலப் பரப்பு: 12 ஏக்கர்
-ஆய்வாளர் குறிப்பு: சீரமைப்பு நிறைவுற்றது.""",
+ஆவணம் எண்: 142 / 1972
+நாள்: 24 மே 1972
+பாசனக் கால்வாய்: வெண்ணாறு கிளைக் கால்வாய்
+மாவட்டம் / வட்டம்: தஞ்சாவூர் மாவட்டம், நாகப்பட்டினம் வட்டம்
+கிராமம்: வடக்குப் பூதனூர்
+ஆயக்கட்டு பரப்பு: 12 ஏக்கர்
+புல எண்: 78, 79, 81
+பாசன வகை: நேரடி கால்வாய் பாசனம்
+
+உதவிப் பொறியாளர் — நில அளவை
+P.W.D., Vennaru Division, Thanjavur""",
         "file_name": "irrigation_record_1972.png",
-        "model_name": "T3.7-Indic-Tamil-CNN",
+        "image_path": "data/uploads/irrigation_record_1972.png",
+        "model_name": "Tesseract OCR (Primary Model - lang='tam')",
         "processing_time_ms": 142.1,
         "created_at": (datetime.datetime.now() - datetime.timedelta(days=4)).isoformat()
-    },
-    {
-        "id": "TNOCR-0244",
-        "title": "கோவில் மானியப் பட்டா",
-        "department": "Endowments",
-        "year": "1959",
-        "district": "Thanjavur",
-        "category": "Deed",
-        "status": "Draft",
-        "confidence": 82.4,
-        "char_count": 290,
-        "word_count": 41,
-        "lines_count": 7,
-        "tamil_text": """ஸ்ரீ பிரகதீஸ்வரர் திருக்கோவில் திருப்பணி நில மானியம்.
-ஆவணம்: 1959 தை 15
-தானம் வழங்கியவர்: விஸ்வநாத அய்யர்
-நன்செய் நில உரிமை: ஐந்து மா""",
-        "file_name": "temple_grant_1959.jpg",
-        "model_name": "T3.7-Indic-Tamil-CNN",
-        "processing_time_ms": 119.8,
-        "created_at": (datetime.datetime.now() - datetime.timedelta(days=7)).isoformat()
     }
 ]
 

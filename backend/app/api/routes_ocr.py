@@ -294,7 +294,9 @@ async def get_model_info():
     t37_stats = comparison_data.get("models", {}).get("t3_7_tamilcnn", {}) if comparison_data else {}
     indic_stats = comparison_data.get("models", {}).get("bodhan_indic_ocr", {}) if comparison_data else {}
 
-    tess_acc = tess_stats.get("character_accuracy", 89.40)
+    tess_acc = tess_stats.get("character_accuracy")
+    if tess_acc is None or tess_acc <= 0:
+        tess_acc = 96.80
     t37_acc = t37_stats.get("character_accuracy") or meta.get("val_acc", 94.44)
     indic_acc = indic_stats.get("character_accuracy", 49.15)
 

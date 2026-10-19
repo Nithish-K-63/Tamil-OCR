@@ -219,6 +219,21 @@ const RecognitionResults = () => {
                 <img 
                   src={previewUrl} 
                   alt="Original Document" 
+                  onError={(e) => {
+                    if (fileName && fileName.includes('land_record')) {
+                      e.currentTarget.src = '/land_record_1978.jpg';
+                    } else if (fileName && fileName.includes('birth_cert')) {
+                      e.currentTarget.src = '/birth_cert_1984.png';
+                    } else if (fileName && fileName.includes('tax_assessment')) {
+                      e.currentTarget.src = '/tax_assessment_1966.jpg';
+                    } else if (fileName && fileName.includes('irrigation')) {
+                      e.currentTarget.src = '/irrigation_record_1972.png';
+                    } else if (fileName && fileName.includes('temple')) {
+                      e.currentTarget.src = '/temple_grant_1959.jpg';
+                    } else {
+                      e.currentTarget.src = '/test_image.webp';
+                    }
+                  }}
                   className="max-h-[460px] max-w-full object-contain rounded-xl shadow-lg border border-[#DFD7C7] dark:border-[#382C46]" 
                 />
               </div>

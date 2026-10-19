@@ -27,3 +27,8 @@ Dataset/
 tesseract_bin/
 backend/tesseract_bin/
 
+# Runtime Uploads & Logs
+backend/data/uploads/TNOCR-*
+backend/data/uploads/CHAT-*
+*.log
+
