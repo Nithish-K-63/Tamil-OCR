@@ -110,8 +110,8 @@ class ImagePreprocessor:
         clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
         enhanced = clahe.apply(gray)
 
-        # Gentle denoising to preserve fine Tamil stroke curves and pulli dots
-        denoised = cv2.fastNlMeansDenoising(enhanced, h=8, templateWindowSize=7, searchWindowSize=21)
+        # Fast edge-preserving denoising to preserve fine Tamil stroke curves and pulli dots
+        denoised = cv2.bilateralFilter(enhanced, d=5, sigmaColor=30, sigmaSpace=30)
 
         # Otsu binarization combined with local thresholding to avoid background amplification
         _, otsu_bin = cv2.threshold(denoised, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)

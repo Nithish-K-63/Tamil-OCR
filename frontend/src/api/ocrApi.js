@@ -7,11 +7,14 @@ const getStoredConfig = (key, fallback = "") => {
   }
 };
 
+const PROD_RENDER_URL = "https://tamil-ocr-ymob.onrender.com";
+
 export const getApiConfig = () => {
+  const isLocal = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+  const defaultProdBase = isLocal ? "" : PROD_RENDER_URL;
   return {
-    // Default to relative URL "" so requests go to "/api/..." through Vite dev proxy
-    // If VITE_API_URL or localStorage explicitly provides a URL, use it
-    baseUrl: import.meta.env.VITE_API_URL || getStoredConfig("tamilocr_api_url", ""),
+    // In production on Vercel, default directly to Render URL to avoid Vercel 10s serverless proxy cutoffs
+    baseUrl: import.meta.env.VITE_API_URL || getStoredConfig("tamilocr_api_url", defaultProdBase),
     apiKey: getStoredConfig("tamilocr_api_key", ""),
     demoMode: getStoredConfig("tamilocr_demo_mode", "false") === "true",
     modelName: getStoredConfig("tamilocr_model", "tesseract_primary"),
@@ -47,8 +50,6 @@ const resolveUrl = (endpoint, baseUrl) => {
 /**
  * Safe fetch with AbortController timeout and automatic fallback between relative proxy and direct backend.
  */
-const PROD_RENDER_URL = "https://tamil-ocr-ymob.onrender.com";
-
 const fetchWithTimeout = async (endpoint, options = {}, timeoutMs = 60000) => {
   const config = getApiConfig();
   const controller = new AbortController();
@@ -62,6 +63,10 @@ const fetchWithTimeout = async (endpoint, options = {}, timeoutMs = 60000) => {
   };
 
   const primaryUrl = resolveUrl(endpoint, config.baseUrl);
+  const isLocal = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+  // If primary was direct Render, fallback to relative proxy, and vice versa
+  const fallbackBase = config.baseUrl && config.baseUrl.includes("onrender.com") ? "" : (isLocal ? "http://127.0.0.1:8000" : PROD_RENDER_URL);
+  const fallbackUrl = resolveUrl(endpoint, fallbackBase);
 
   try {
     const res = await fetch(primaryUrl, {
@@ -69,22 +74,31 @@ const fetchWithTimeout = async (endpoint, options = {}, timeoutMs = 60000) => {
       signal: controller.signal,
       headers
     });
+    // If proxy returned 504 / 502 / 503 gateway error, attempt fallback
+    if (!res.ok && (res.status === 504 || res.status === 502 || res.status === 503) && fallbackUrl !== primaryUrl) {
+      const fallbackController = new AbortController();
+      const fallbackTimer = setTimeout(() => fallbackController.abort(), timeoutMs);
+      try {
+        const fallbackRes = await fetch(fallbackUrl, {
+          ...options,
+          signal: fallbackController.signal,
+          headers
+        });
+        clearTimeout(fallbackTimer);
+        clearTimeout(timeoutId);
+        return fallbackRes;
+      } catch {
+        clearTimeout(fallbackTimer);
+      }
+    }
     clearTimeout(timeoutId);
     return res;
   } catch (primaryErr) {
     clearTimeout(timeoutId);
 
-    const isAbort = primaryErr.name === "AbortError" || (primaryErr.message && primaryErr.message.toLowerCase().includes("abort"));
-    if (isAbort) {
-      throw new Error("Request timed out waiting for backend server. The server may be warming up — please try again in a few moments.");
-    }
-
-    // Automatic bidirectional fallback: try live Render backend
-    try {
-      const isLocal = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
-      const fallbackBase = isLocal ? "http://127.0.0.1:8000" : PROD_RENDER_URL;
-      const fallbackUrl = resolveUrl(endpoint, fallbackBase);
-      if (fallbackUrl !== primaryUrl) {
+    // Automatic bidirectional fallback if primary failed
+    if (fallbackUrl !== primaryUrl) {
+      try {
         const fallbackController = new AbortController();
         const fallbackTimer = setTimeout(() => fallbackController.abort(), timeoutMs);
         const fallbackRes = await fetch(fallbackUrl, {
@@ -94,9 +108,14 @@ const fetchWithTimeout = async (endpoint, options = {}, timeoutMs = 60000) => {
         });
         clearTimeout(fallbackTimer);
         return fallbackRes;
+      } catch {
+        // Fall through
       }
-    } catch {
-      // Fall through to throw primary error
+    }
+
+    const isAbort = primaryErr.name === "AbortError" || (primaryErr.message && primaryErr.message.toLowerCase().includes("abort"));
+    if (isAbort) {
+      throw new Error("Request timed out waiting for backend server. The server may be warming up — please try again in a few moments.");
     }
 
     throw primaryErr;
@@ -193,14 +212,14 @@ export const processDocumentOCR = async (file, metadata = {}) => {
   formData.append("metadata", JSON.stringify({ ...metadata, model: selectedModel }));
 
   try {
-    // Neural model inference timeout: 45 seconds
+    // Neural model inference timeout: 60 seconds
     const response = await fetchWithTimeout(
       "/api/ocr", 
       {
         method: "POST",
         body: formData
       },
-      45000
+      60000
     );
 
     if (response.ok) {
@@ -301,7 +320,7 @@ export const processSavedDocumentOCR = async (recordId, modelName = "tesseract_p
         method: "POST",
         body: formData
       },
-      45000
+      60000
     );
 
     if (res.ok) {
