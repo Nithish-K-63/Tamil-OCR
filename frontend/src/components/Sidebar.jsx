@@ -148,10 +148,12 @@ const Sidebar = ({ isOpen, onClose }) => {
         <div className="p-3.5 border-t border-[#DFD7C7] dark:border-white/10 bg-[#EFE9DC] dark:bg-[#160C1D] flex items-center justify-between">
           <div className="flex items-center gap-2.5 truncate">
             <div className="w-9 h-9 rounded-full bg-[#BF573F] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-sm">
-              {user?.avatar || "AK"}
+              {user?.avatar || (user?.name ? user.name.slice(0, 2).toUpperCase() : (user?.email ? user.email.slice(0, 2).toUpperCase() : "NK"))}
             </div>
             <div className="truncate">
-              <p className="text-xs font-bold text-[#1A1523] dark:text-white truncate">{user?.name || "Arun Kumar"}</p>
+              <p className="text-xs font-bold text-[#1A1523] dark:text-white truncate">
+                {user?.name || user?.fullName || (user?.email ? user.email.split('@')[0] : "Officer")}
+              </p>
               <p className="text-[10px] text-[#7A7185] dark:text-[#9D8DA6] truncate">{user?.role || t('role_admin', 'Project Administrator')}</p>
             </div>
           </div>

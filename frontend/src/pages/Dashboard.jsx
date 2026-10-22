@@ -14,10 +14,12 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 import { fetchDashboardStats } from '../api/ocrApi';
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { t } = useLanguage();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -195,6 +197,22 @@ const Dashboard = () => {
   // Recent records from database
   const recentRecords = dashboardData?.recent_records || [];
 
+  // Extract greeting name from authenticated user profile or email ID
+  const greetingName = useMemo(() => {
+    if (user?.name) return user.name;
+    if (user?.fullName) return user.fullName;
+    if (user?.email) {
+      const prefix = user.email.split('@')[0];
+      return prefix
+        .replace(/[._-]+/g, ' ')
+        .split(' ')
+        .filter(Boolean)
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(' ');
+    }
+    return 'Officer';
+  }, [user]);
+
   return (
     <div className="space-y-6">
       {/* ========================================================
@@ -203,7 +221,7 @@ const Dashboard = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h2 className="text-2xl sm:text-3xl font-serif font-bold text-[#1A1523] dark:text-[#F5F2EB] leading-normal pt-1">
-            {t('greeting_prefix', 'Welcome')}, Arun
+            {t('greeting_prefix', 'Welcome')}, {greetingName}
           </h2>
           <p className="text-xs text-[#7A7185] dark:text-[#9D93A7] mt-1">
             {t('greeting_subtitle', 'Here’s what’s happening with your digitization project today.')}

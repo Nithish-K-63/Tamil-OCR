@@ -148,7 +148,7 @@ const Navbar = ({ onMenuClick, title, subtitle }) => {
             className="flex items-center gap-2 p-0.5 rounded-full hover:opacity-90 transition-all cursor-pointer"
           >
             <div className="w-8 h-8 rounded-full bg-[#BF573F] text-white flex items-center justify-center font-bold text-xs shadow-sm">
-              {user?.avatar || "AK"}
+              {user?.avatar || (user?.name ? user.name.slice(0, 2).toUpperCase() : (user?.email ? user.email.slice(0, 2).toUpperCase() : "NK"))}
             </div>
           </button>
 
@@ -158,7 +158,7 @@ const Navbar = ({ onMenuClick, title, subtitle }) => {
               ${isDark ? 'bg-[#1F1729] border-[#312440] text-white' : 'bg-white border-[#E0D8C8] text-gray-800'}
             `}>
               <div className="p-2 border-b border-gray-200 dark:border-white/10 mb-2">
-                <p className="font-bold text-xs">{user?.name || "Arun Kumar"}</p>
+                <p className="font-bold text-xs">{user?.name || user?.fullName || (user?.email ? user.email.split('@')[0] : "Officer")}</p>
                 <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">{user?.email}</p>
                 <p className="text-[10px] text-[#00737D] font-semibold mt-1">{user?.role || t('role_admin', 'Project Administrator')}</p>
               </div>

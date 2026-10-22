@@ -37,7 +37,7 @@ const OCRProcessing = () => {
   const [copied, setCopied] = useState(false);
   const [countdown, setCountdown] = useState(null);
 
-  const file = location.state?.file;
+  const [file, setFile] = useState(location.state?.file || null);
   const formData = location.state?.formData || {};
   const recordId = location.state?.recordId || location.state?.record?.id;
   const initialRecord = location.state?.record;
@@ -109,20 +109,23 @@ const OCRProcessing = () => {
       } else if (file) {
         result = await processDocumentOCR(file, { ...formData, model: selectedModel });
       } else {
-        // Fallback demo document if navigated directly without file
-        const canvas = document.createElement('canvas');
-        canvas.width = 64;
-        canvas.height = 64;
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(0, 0, 64, 64);
-        ctx.fillStyle = '#000000';
-        ctx.font = '32px serif';
-        ctx.fillText('அ', 16, 44);
-
-        const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
-        const demoFile = new File([blob], 'manuscript_sample.png', { type: 'image/png' });
-        result = await processDocumentOCR(demoFile, { ...formData, model: selectedModel });
+        // Fallback to authentic historical archival document if navigated directly
+        try {
+          const response = await fetch('/tamil_archival_document.jpg');
+          const blob = await response.blob();
+          const demoFile = new File([blob], 'tamil_archival_document.jpg', { type: 'image/jpeg' });
+          setFile(demoFile);
+          result = await processDocumentOCR(demoFile, {
+            title: 'தமிழ் ஆவணங்கள் — அணிந்துரை (வரலாற்று ஆவணம்)',
+            tamilTitle: 'தமிழ் ஆவணங்கள் — அணிந்துரை (வரலாற்று ஆவணம்)',
+            department: 'Judicial Archives',
+            year: '1985',
+            district: 'Chennai',
+            model: selectedModel
+          });
+        } catch (fetchErr) {
+          console.warn("Could not fetch real archival document sample:", fetchErr);
+        }
       }
 
       if (intervalRef.current) {
@@ -314,7 +317,7 @@ const OCRProcessing = () => {
                 <span>{t('inspection_badge', 'Vision Model Inspection')}</span>
               </div>
               <h4 className="font-bold text-sm font-tamil text-[#1A1523] dark:text-[#F5F2EB]">
-                {formData.tamilTitle || formData.title || file?.name || initialRecord?.title || "நிலப் பதிவு ஆவணம் - 1978"}
+                {formData.tamilTitle || formData.title || file?.name || initialRecord?.title || "தமிழ் ஆவணங்கள் — அணிந்துரை (வரலாற்று ஆவணம்)"}
               </h4>
               <p className="text-xs text-[#7A7185] dark:text-[#9D93A7]">
                 {steps[currentStep]?.name}
@@ -355,11 +358,14 @@ const OCRProcessing = () => {
                   src={resolveImageUrl(finalRecord.image_path, finalRecord.file_name)}
                   alt="Document Binarized Preview"
                   className="max-h-56 object-contain filter contrast-200 grayscale"
+                  onError={(e) => { e.currentTarget.src = '/tamil_archival_document.jpg'; }}
                 />
               ) : (
-                <div className="w-48 h-32 flex items-center justify-center text-xs text-gray-400">
-                  Binarized mask active
-                </div>
+                <img
+                  src="/tamil_archival_document.jpg"
+                  alt="Document Binarized Preview"
+                  className="max-h-56 object-contain filter contrast-200 grayscale"
+                />
               )}
             </div>
           </div>

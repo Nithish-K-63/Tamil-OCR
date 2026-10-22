@@ -194,7 +194,7 @@ async def trigger_ocr_on_saved_document(
 
     # 3. Fallback: check project root sample images
     if not contents:
-        for fallback_name in ["appendix_page_28.png", "appendix_page_29.png", "test_rendered.png"]:
+        for fallback_name in ["tamil_archival_document.jpg", "test_image.webp", "appendix_page_28.png", "appendix_page_29.png"]:
             f_path = DATA_DIR.parent.parent / fallback_name
             if f_path.is_file():
                 with open(f_path, "rb") as f_fb:

@@ -60,9 +60,9 @@ const RecognitionResults = () => {
   const textFromApi = result?.tamilText || result?.result?.text || record?.tamil_text;
   const initialText = (textFromApi && typeof textFromApi === 'string') ? textFromApi : "";
 
-  const docTitle = record?.title || result?.metadata?.title || formData?.title || formData?.tamilTitle || "நிலப் பதிவு ஆவணம்";
-  const department = record?.department || result?.metadata?.department || formData?.department || "Revenue Department";
-  const district = record?.district || result?.metadata?.district || formData?.district || "Thanjavur";
+  const docTitle = record?.title || result?.metadata?.title || formData?.title || formData?.tamilTitle || "தமிழ் ஆவணங்கள் — அணிந்துரை";
+  const department = record?.department || result?.metadata?.department || formData?.department || "Judicial Archives";
+  const district = record?.district || result?.metadata?.district || formData?.district || "Chennai";
   const modelUsed = result?.metadata?.modelUsed || record?.model_name || "Tesseract OCR (Primary Model - lang='tam')";
 
   const rawConf = result?.confidenceScore ?? result?.result?.confidence ?? record?.confidenceRaw ?? record?.confidence ?? (initialText ? 90 : 0);
@@ -71,7 +71,7 @@ const RecognitionResults = () => {
   const rawPreview = location.state?.previewUrl || 
     (file ? URL.createObjectURL(file) : null) || 
     (record ? resolveImageUrl(record.image_path, record.file_name) : null) || 
-    '/test_image.webp';
+    '/tamil_archival_document.jpg';
   const [previewUrl, setPreviewUrl] = useState(rawPreview);
 
   const [isEditing, setIsEditing] = useState(false);
@@ -91,7 +91,7 @@ const RecognitionResults = () => {
     const nextPreview = location.state?.previewUrl || 
       (file ? URL.createObjectURL(file) : null) || 
       (record ? resolveImageUrl(record.image_path, record.file_name) : null) || 
-      '/test_image.webp';
+      '/tamil_archival_document.jpg';
     setPreviewUrl(nextPreview);
   }, [location.state, file, record]);
 
@@ -220,7 +220,9 @@ const RecognitionResults = () => {
                   src={previewUrl} 
                   alt="Original Document" 
                   onError={(e) => {
-                    if (fileName && fileName.includes('land_record')) {
+                    if (fileName && (fileName.includes('tamil_archival') || fileName.includes('archival'))) {
+                      e.currentTarget.src = '/tamil_archival_document.jpg';
+                    } else if (fileName && fileName.includes('land_record')) {
                       e.currentTarget.src = '/land_record_1978.jpg';
                     } else if (fileName && fileName.includes('birth_cert')) {
                       e.currentTarget.src = '/birth_cert_1984.png';
@@ -231,7 +233,7 @@ const RecognitionResults = () => {
                     } else if (fileName && fileName.includes('temple')) {
                       e.currentTarget.src = '/temple_grant_1959.jpg';
                     } else {
-                      e.currentTarget.src = '/test_image.webp';
+                      e.currentTarget.src = '/tamil_archival_document.jpg';
                     }
                   }}
                   className="max-h-[460px] max-w-full object-contain rounded-xl shadow-lg border border-[#DFD7C7] dark:border-[#382C46]" 
