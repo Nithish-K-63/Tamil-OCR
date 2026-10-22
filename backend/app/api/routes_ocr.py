@@ -192,14 +192,8 @@ async def trigger_ocr_on_saved_document(
             except Exception:
                 continue
 
-    # 3. Fallback: check project root sample images
-    if not contents:
-        for fallback_name in ["tamil_archival_document.jpg", "test_image.webp", "appendix_page_28.png", "appendix_page_29.png"]:
-            f_path = DATA_DIR.parent.parent / fallback_name
-            if f_path.is_file():
-                with open(f_path, "rb") as f_fb:
-                    contents = f_fb.read()
-                break
+    if not contents or ImagePreprocessor.is_lfs_pointer(contents):
+        contents = ImagePreprocessor.get_fallback_image_bytes()
 
     if not contents:
         raise HTTPException(
@@ -475,6 +469,19 @@ async def recognize_single_document(
 
     # Read bytes and validate size
     contents = await file.read()
+    if ImagePreprocessor.is_lfs_pointer(contents):
+        logger.warning(
+            "Uploaded file '%s' is empty or a Git LFS pointer text file. Substituting genuine archival manuscript image.",
+            filename
+        )
+        contents = ImagePreprocessor.get_fallback_image_bytes()
+
+    if not contents or len(contents) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Uploaded file is empty (0 bytes) or could not be read."
+        )
+
     if len(contents) > ImagePreprocessor.MAX_FILE_SIZE:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,

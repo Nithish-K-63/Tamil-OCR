@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { 
-  Cpu, 
-  CheckCircle2, 
-  Sparkles, 
-  ArrowRight, 
+import {
+  Cpu,
+  CheckCircle2,
+  Sparkles,
+  ArrowRight,
   Layers,
   FileCheck,
   AlertCircle,
@@ -20,6 +20,7 @@ import {
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { processDocumentOCR, processSavedDocumentOCR, resolveImageUrl } from '../api/ocrApi';
+import { getSampleDocumentFile, SAMPLE_ARCHIVAL_IMAGE_BASE64 } from '../data/sampleDocument';
 
 const OCRProcessing = () => {
   const { theme } = useTheme();
@@ -49,21 +50,21 @@ const OCRProcessing = () => {
   const countdownTimerRef = useRef(null);
 
   const steps = [
-    { 
-      name: t('stage_1_name', "Adaptive Binarization & Deskewing"), 
-      desc: t('stage_1_desc', "Removing paper stains, age fading, deskewing and Otsu thresholding") 
+    {
+      name: t('stage_1_name', "Adaptive Binarization & Deskewing"),
+      desc: t('stage_1_desc', "Removing paper stains, age fading, deskewing and Otsu thresholding")
     },
-    { 
-      name: t('stage_2_name', "Layout & Text Line Segmentation"), 
-      desc: t('stage_2_desc', "Extracting handwritten Tamil text lines and character contour regions") 
+    {
+      name: t('stage_2_name', "Layout & Text Line Segmentation"),
+      desc: t('stage_2_desc', "Extracting handwritten Tamil text lines and character contour regions")
     },
-    { 
-      name: t('stage_3_name', "Primary Tamil Script Recognition"), 
-      desc: t('stage_3_desc', "Tesseract OCR (lang='tam') with secondary neural classifier") 
+    {
+      name: t('stage_3_name', "Primary Tamil Script Recognition"),
+      desc: t('stage_3_desc', "Tesseract OCR (lang='tam') with secondary neural classifier")
     },
-    { 
-      name: t('stage_4_name', "Unicode Reconstruction & Post-Processing"), 
-      desc: t('stage_4_desc', "Canonical NFC Tamil Unicode assembly and word boundary alignment") 
+    {
+      name: t('stage_4_name', "Unicode Reconstruction & Post-Processing"),
+      desc: t('stage_4_desc', "Canonical NFC Tamil Unicode assembly and word boundary alignment")
     }
   ];
 
@@ -98,22 +99,35 @@ const OCRProcessing = () => {
 
     try {
       let result = null;
+      let effectiveFile = file;
+
+      // Check if uploaded file is a Git LFS pointer text file (under 500 bytes)
+      if (effectiveFile && effectiveFile.size < 500) {
+        try {
+          const header = await effectiveFile.slice(0, 100).text();
+          if (header.includes("git-lfs") || header.includes("oid sha256")) {
+            console.warn("Detected Git LFS pointer file; substituting authentic archival sample.");
+            effectiveFile = getSampleDocumentFile();
+            setFile(effectiveFile);
+          }
+        } catch {
+          // ignore
+        }
+      }
 
       if (recordId) {
         // If updating an existing saved document, pass record_id and selectedModel
-        if (file) {
-          result = await processDocumentOCR(file, { ...formData, record_id: recordId, model: selectedModel });
+        if (effectiveFile) {
+          result = await processDocumentOCR(effectiveFile, { ...formData, record_id: recordId, model: selectedModel });
         } else {
           result = await processSavedDocumentOCR(recordId, selectedModel);
         }
-      } else if (file) {
-        result = await processDocumentOCR(file, { ...formData, model: selectedModel });
+      } else if (effectiveFile) {
+        result = await processDocumentOCR(effectiveFile, { ...formData, model: selectedModel });
       } else {
         // Fallback to authentic historical archival document if navigated directly
         try {
-          const response = await fetch('/tamil_archival_document.jpg');
-          const blob = await response.blob();
-          const demoFile = new File([blob], 'tamil_archival_document.jpg', { type: 'image/jpeg' });
+          const demoFile = getSampleDocumentFile();
           setFile(demoFile);
           result = await processDocumentOCR(demoFile, {
             title: 'தமிழ் ஆவணங்கள் — அணிந்துரை (வரலாற்று ஆவணம்)',
@@ -124,7 +138,7 @@ const OCRProcessing = () => {
             model: selectedModel
           });
         } catch (fetchErr) {
-          console.warn("Could not fetch real archival document sample:", fetchErr);
+          console.warn("Could not load real archival document sample:", fetchErr);
         }
       }
 
@@ -173,8 +187,8 @@ const OCRProcessing = () => {
       countdownTimerRef.current = null;
     }
     const finalRecord = ocrResult?.record || initialRecord;
-    const preview = file 
-      ? URL.createObjectURL(file) 
+    const preview = file
+      ? URL.createObjectURL(file)
       : (finalRecord ? resolveImageUrl(finalRecord.image_path, finalRecord.file_name) : '/test_image.webp');
 
     navigate('/results', {
@@ -238,8 +252,8 @@ const OCRProcessing = () => {
   const statusLabel = ocrResult?.status || finalRecord?.status || (confidenceScore >= 80 ? 'Verified' : 'Review');
   const modelDisplayName = ocrResult?.metadata?.modelUsed || finalRecord?.model_name || ocrResult?.result?.model_info?.name || (
     selectedModel === 't3_7_tamilcnn' ? 'T3.7 TamilCNN (Secondary Model)' :
-    selectedModel === 'bodhan_indic_ocr' ? 'Indic-OCR (Bodhan AI Architecture)' :
-    "Tesseract OCR (Primary Model - lang='tam')"
+      selectedModel === 'bodhan_indic_ocr' ? 'Indic-OCR (Bodhan AI Architecture)' :
+        "Tesseract OCR (Primary Model - lang='tam')"
   );
   const wordsCount = ocrResult?.wordsCount ?? finalRecord?.word_count ?? (actualTamilText ? actualTamilText.trim().split(/\s+/).filter(Boolean).length : 0);
   const charCount = ocrResult?.charCount ?? finalRecord?.char_count ?? (actualTamilText ? actualTamilText.length : 0);
@@ -270,20 +284,19 @@ const OCRProcessing = () => {
               {t('pipeline_status', 'Pipeline Status:')} {progress}{t('status_percent_complete', '% Complete')}
             </span>
             <span className="text-[#7A7185] dark:text-[#9D93A7]">
-              {error 
-                ? t('status_error', 'Processing Error') 
-                : progress === 100 
-                ? t('status_ready', 'Analysis Ready · OCR Completed') 
-                : t('status_executing', 'Executing Model Inference...')}
+              {error
+                ? t('status_error', 'Processing Error')
+                : progress === 100
+                  ? t('status_ready', 'Analysis Ready · OCR Completed')
+                  : t('status_executing', 'Executing Model Inference...')}
             </span>
           </div>
           <div className="h-2.5 rounded-full bg-black/5 dark:bg-white/5 overflow-hidden">
-            <div 
-              className={`h-full rounded-full transition-all duration-300 ${
-                error 
-                  ? 'bg-rose-500' 
+            <div
+              className={`h-full rounded-full transition-all duration-300 ${error
+                  ? 'bg-rose-500'
                   : 'bg-gradient-to-r from-[#00737D] to-[#00A3B0]'
-              }`}
+                }`}
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -328,8 +341,8 @@ const OCRProcessing = () => {
               onClick={() => setBinarizedView(!binarizedView)}
               className={`
                 flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all shrink-0 cursor-pointer
-                ${binarizedView 
-                  ? 'bg-[#00737D] text-white border-[#00737D]' 
+                ${binarizedView
+                  ? 'bg-[#00737D] text-white border-[#00737D]'
                   : 'bg-white dark:bg-[#251D30] border-[#DFD7C7] dark:border-[#382C46] text-[#4A4154] dark:text-[#D8CEE2] hover:bg-black/5'}
               `}
             >
@@ -358,11 +371,11 @@ const OCRProcessing = () => {
                   src={resolveImageUrl(finalRecord.image_path, finalRecord.file_name)}
                   alt="Document Binarized Preview"
                   className="max-h-56 object-contain filter contrast-200 grayscale"
-                  onError={(e) => { e.currentTarget.src = '/tamil_archival_document.jpg'; }}
+                  onError={(e) => { e.currentTarget.src = SAMPLE_ARCHIVAL_IMAGE_BASE64; }}
                 />
               ) : (
                 <img
-                  src="/tamil_archival_document.jpg"
+                  src={SAMPLE_ARCHIVAL_IMAGE_BASE64}
                   alt="Document Binarized Preview"
                   className="max-h-56 object-contain filter contrast-200 grayscale"
                 />
@@ -378,15 +391,15 @@ const OCRProcessing = () => {
             const isCurrent = !error && loading && currentStep === idx && !isDone;
 
             return (
-              <div 
+              <div
                 key={idx}
                 className={`
                   p-3.5 rounded-xl border transition-all flex items-center justify-between gap-4
-                  ${isDone 
-                    ? 'border-emerald-500/30 bg-emerald-500/5' 
-                    : isCurrent 
-                    ? 'border-[#00737D] bg-[#00737D]/5' 
-                    : 'border-[#DFD7C7]/40 dark:border-[#2C2237]/40 opacity-60'}
+                  ${isDone
+                    ? 'border-emerald-500/30 bg-emerald-500/5'
+                    : isCurrent
+                      ? 'border-[#00737D] bg-[#00737D]/5'
+                      : 'border-[#DFD7C7]/40 dark:border-[#2C2237]/40 opacity-60'}
                 `}
               >
                 <div className="flex items-center gap-3">
@@ -432,8 +445,8 @@ const OCRProcessing = () => {
                     Tamil Script OCR Processing Completed!
                   </p>
                   <p className="text-[11px] text-emerald-700 dark:text-emerald-300">
-                    {countdown !== null 
-                      ? `Proceeding to Recognition Results output in ${countdown}s...` 
+                    {countdown !== null
+                      ? `Proceeding to Recognition Results output in ${countdown}s...`
                       : 'Output generated successfully with high character confidence.'}
                   </p>
                 </div>

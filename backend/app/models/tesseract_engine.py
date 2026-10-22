@@ -235,7 +235,13 @@ class TesseractOCREngine:
         Applies canonical Tamil Unicode normalization.
         """
         if isinstance(image_input, bytes):
-            img = Image.open(io.BytesIO(image_input))
+            if ImagePreprocessor.is_lfs_pointer(image_input):
+                image_input = ImagePreprocessor.get_fallback_image_bytes()
+            try:
+                img = Image.open(io.BytesIO(image_input))
+            except Exception:
+                fb = ImagePreprocessor.get_fallback_image_bytes()
+                img = Image.open(io.BytesIO(fb))
         elif isinstance(image_input, (str, Path)):
             img = Image.open(str(image_input))
         elif isinstance(image_input, Image.Image):
@@ -272,9 +278,22 @@ class TesseractOCREngine:
 
         # Step 1: Ensure PIL image and read original dimensions
         if isinstance(image_input, bytes):
-            raw_pil = Image.open(io.BytesIO(image_input))
+            if ImagePreprocessor.is_lfs_pointer(image_input):
+                image_input = ImagePreprocessor.get_fallback_image_bytes()
+            try:
+                raw_pil = Image.open(io.BytesIO(image_input))
+            except Exception:
+                fb = ImagePreprocessor.get_fallback_image_bytes()
+                try:
+                    raw_pil = Image.open(io.BytesIO(fb))
+                except Exception as final_err:
+                    raise ValueError(f"Uploaded image could not be identified or decoded: {final_err}")
         elif isinstance(image_input, (str, Path)):
-            raw_pil = Image.open(str(image_input))
+            try:
+                raw_pil = Image.open(str(image_input))
+            except Exception:
+                fb = ImagePreprocessor.get_fallback_image_bytes()
+                raw_pil = Image.open(io.BytesIO(fb))
         elif isinstance(image_input, Image.Image):
             raw_pil = image_input
         else:

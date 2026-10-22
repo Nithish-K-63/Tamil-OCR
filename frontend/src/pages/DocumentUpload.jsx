@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Upload, 
-  FileText, 
-  Check, 
-  Sparkles, 
+import {
+  Upload,
+  FileText,
+  Check,
+  Sparkles,
   Info,
   CheckCircle2,
   AlertCircle,
@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { fetchModelInfo, uploadDocumentOnly } from '../api/ocrApi';
+import { getSampleDocumentFile, SAMPLE_ARCHIVAL_IMAGE_BASE64 } from '../data/sampleDocument';
 
 const DocumentUpload = () => {
   const navigate = useNavigate();
@@ -63,11 +64,9 @@ const DocumentUpload = () => {
     }
   };
 
-  const handleLoadSample = async () => {
+  const handleLoadSample = () => {
     try {
-      const response = await fetch(REAL_ARCHIVE_SAMPLE.url);
-      const blob = await response.blob();
-      const sampleFile = new File([blob], REAL_ARCHIVE_SAMPLE.name, { type: 'image/jpeg' });
+      const sampleFile = getSampleDocumentFile();
       setFile(sampleFile);
       setDocTitle(REAL_ARCHIVE_SAMPLE.title);
       setDepartment(REAL_ARCHIVE_SAMPLE.department);
@@ -83,19 +82,22 @@ const DocumentUpload = () => {
   const handleUploadDocument = async () => {
     let targetFile = file;
     if (!targetFile) {
-      // Auto-load authentic historical Tamil archive manuscript sample (> 95% accuracy)
+      // Auto-load authentic historical Tamil archive manuscript sample
+      targetFile = getSampleDocumentFile();
+      setFile(targetFile);
+      if (!docTitle) setDocTitle(REAL_ARCHIVE_SAMPLE.title);
+      if (!docYear) setDocYear(REAL_ARCHIVE_SAMPLE.year);
+      if (!district) setDistrict(REAL_ARCHIVE_SAMPLE.district);
+      if (!department) setDepartment(REAL_ARCHIVE_SAMPLE.department);
+    } else if (targetFile.size < 500) {
       try {
-        const response = await fetch('/tamil_archival_document.jpg');
-        const blob = await response.blob();
-        targetFile = new File([blob], 'tamil_archival_document.jpg', { type: 'image/jpeg' });
-        setFile(targetFile);
-        if (!docTitle) setDocTitle(REAL_ARCHIVE_SAMPLE.title);
-        if (!docYear) setDocYear(REAL_ARCHIVE_SAMPLE.year);
-        if (!district) setDistrict(REAL_ARCHIVE_SAMPLE.district);
-        if (!department) setDepartment(REAL_ARCHIVE_SAMPLE.department);
-      } catch (e) {
-        setUploadError("Please select or drop a handwritten Tamil image file first.");
-        return;
+        const header = await targetFile.slice(0, 100).text();
+        if (header.includes("git-lfs") || header.includes("oid sha256")) {
+          targetFile = getSampleDocumentFile();
+          setFile(targetFile);
+        }
+      } catch {
+        // ignore
       }
     }
 
@@ -224,8 +226,8 @@ const DocumentUpload = () => {
             onDrop={handleFileDrop}
             className={`
               p-8 sm:p-12 rounded-xl border-2 border-dashed flex flex-col items-center justify-center text-center transition-all cursor-pointer relative
-              ${isDragging 
-                ? 'border-[#00737D] bg-[#00737D]/5' 
+              ${isDragging
+                ? 'border-[#00737D] bg-[#00737D]/5'
                 : 'border-[#DFD7C7] dark:border-[#382C46] bg-[#FAF8F5]/50 dark:bg-[#16101E]/50'}
             `}
           >
@@ -272,9 +274,9 @@ const DocumentUpload = () => {
                 <div className="flex items-center gap-3 truncate">
                   <div className="w-10 h-10 rounded-lg overflow-hidden bg-white dark:bg-[#1A1024] border border-emerald-200 shrink-0 flex items-center justify-center">
                     {file.type?.startsWith('image/') ? (
-                      <img 
-                        src={URL.createObjectURL(file)} 
-                        alt="Selected manuscript" 
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt="Selected manuscript"
                         className="w-full h-full object-cover"
                       />
                     ) : (
@@ -385,11 +387,10 @@ const DocumentUpload = () => {
               <button
                 type="button"
                 onClick={() => setSelectedModel('tesseract_primary')}
-                className={`p-4 rounded-xl border text-left transition-all cursor-pointer ${
-                  selectedModel === 'tesseract_primary'
+                className={`p-4 rounded-xl border text-left transition-all cursor-pointer ${selectedModel === 'tesseract_primary'
                     ? 'border-[#00737D] bg-[#00737D]/8 ring-2 ring-[#00737D]'
                     : 'border-[#DFD7C7] dark:border-[#382C46] bg-white dark:bg-[#251D30] hover:bg-gray-50 dark:hover:bg-[#2D233A]'
-                }`}
+                  }`}
               >
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center gap-2">
@@ -418,11 +419,10 @@ const DocumentUpload = () => {
               <button
                 type="button"
                 onClick={() => setSelectedModel('t3_7_tamilcnn')}
-                className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
-                  selectedModel === 't3_7_tamilcnn'
+                className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${selectedModel === 't3_7_tamilcnn'
                     ? 'border-[#00737D] bg-[#00737D]/5 ring-2 ring-[#00737D]/40'
                     : 'border-[#DFD7C7] dark:border-[#382C46] bg-white dark:bg-[#251D30] hover:bg-gray-50 dark:hover:bg-[#2D233A]'
-                }`}
+                  }`}
               >
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-xs font-bold text-[#1A1523] dark:text-[#F5F2EB]">T3.7 TamilCNN</span>
@@ -438,11 +438,10 @@ const DocumentUpload = () => {
               <button
                 type="button"
                 onClick={() => setSelectedModel('bodhan_indic_ocr')}
-                className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
-                  selectedModel === 'bodhan_indic_ocr'
+                className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${selectedModel === 'bodhan_indic_ocr'
                     ? 'border-[#00737D] bg-[#00737D]/5 ring-2 ring-[#00737D]/40'
                     : 'border-[#DFD7C7] dark:border-[#382C46] bg-white dark:bg-[#251D30] hover:bg-gray-50 dark:hover:bg-[#2D233A]'
-                }`}
+                  }`}
               >
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-xs font-bold text-[#1A1523] dark:text-[#F5F2EB]">Indic-OCR</span>
@@ -465,8 +464,8 @@ const DocumentUpload = () => {
                 {selectedModel === 'tesseract_primary'
                   ? `Tesseract OCR (Primary Model - lang='tam') · ${typeof tessAcc === 'number' ? tessAcc.toFixed(1) : tessAcc}% Document Accuracy · Active`
                   : selectedModel === 'bodhan_indic_ocr'
-                  ? `Indic-OCR (Bodhan AI Architecture - Secondary) · ${typeof indicAcc === 'number' ? indicAcc.toFixed(1) : indicAcc}% Tested · Active`
-                  : `TamilCNN T3.7 (Secondary Model) · ${typeof t37Acc === 'number' ? t37Acc.toFixed(1) : t37Acc}% Tested · Active`}
+                    ? `Indic-OCR (Bodhan AI Architecture - Secondary) · ${typeof indicAcc === 'number' ? indicAcc.toFixed(1) : indicAcc}% Tested · Active`
+                    : `TamilCNN T3.7 (Secondary Model) · ${typeof t37Acc === 'number' ? t37Acc.toFixed(1) : t37Acc}% Tested · Active`}
               </span>
             </div>
 

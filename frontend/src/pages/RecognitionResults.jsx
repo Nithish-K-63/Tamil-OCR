@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { 
-  ChevronLeft, 
-  Eye, 
-  Edit3, 
-  Copy, 
-  Check, 
-  Download, 
+import {
+  ChevronLeft,
+  Eye,
+  Edit3,
+  Copy,
+  Check,
+  Download,
   Save,
   RotateCw,
   Cpu,
@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { updateRecord, resolveImageUrl, fetchRecordById } from '../api/ocrApi';
+import { SAMPLE_ARCHIVAL_IMAGE_BASE64 } from '../data/sampleDocument';
 
 const RecognitionResults = () => {
   const navigate = useNavigate();
@@ -68,10 +69,10 @@ const RecognitionResults = () => {
   const rawConf = result?.confidenceScore ?? result?.result?.confidence ?? record?.confidenceRaw ?? record?.confidence ?? (initialText ? 90 : 0);
   const confidence = Math.round(typeof rawConf === 'number' ? rawConf : parseFloat(rawConf) || (initialText ? 90 : 0));
 
-  const rawPreview = location.state?.previewUrl || 
-    (file ? URL.createObjectURL(file) : null) || 
-    (record ? resolveImageUrl(record.image_path, record.file_name) : null) || 
-    '/tamil_archival_document.jpg';
+  const rawPreview = location.state?.previewUrl ||
+    (file ? URL.createObjectURL(file) : null) ||
+    (record ? resolveImageUrl(record.image_path, record.file_name) : null) ||
+    SAMPLE_ARCHIVAL_IMAGE_BASE64;
   const [previewUrl, setPreviewUrl] = useState(rawPreview);
 
   const [isEditing, setIsEditing] = useState(false);
@@ -88,10 +89,10 @@ const RecognitionResults = () => {
   }, [result, record]);
 
   useEffect(() => {
-    const nextPreview = location.state?.previewUrl || 
-      (file ? URL.createObjectURL(file) : null) || 
-      (record ? resolveImageUrl(record.image_path, record.file_name) : null) || 
-      '/tamil_archival_document.jpg';
+    const nextPreview = location.state?.previewUrl ||
+      (file ? URL.createObjectURL(file) : null) ||
+      (record ? resolveImageUrl(record.image_path, record.file_name) : null) ||
+      SAMPLE_ARCHIVAL_IMAGE_BASE64;
     setPreviewUrl(nextPreview);
   }, [location.state, file, record]);
 
@@ -150,29 +151,27 @@ const RecognitionResults = () => {
 
           {/* Recognition Score Badge */}
           <div className="flex items-center gap-3 self-start sm:self-auto">
-            <div className={`w-12 h-12 rounded-full border-2 flex flex-col items-center justify-center font-bold text-xs shadow-xs ${
-              confidence >= 80 
+            <div className={`w-12 h-12 rounded-full border-2 flex flex-col items-center justify-center font-bold text-xs shadow-xs ${confidence >= 80
                 ? 'border-[#00737D] bg-[#E0F2F1]/50 dark:bg-[#153438]/50 text-[#00737D] dark:text-[#2DD4BF]'
-                : confidence > 0 
-                ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400'
-                : 'border-gray-400 bg-gray-100 dark:bg-gray-800 text-gray-500'
-            }`}>
+                : confidence > 0
+                  ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400'
+                  : 'border-gray-400 bg-gray-100 dark:bg-gray-800 text-gray-500'
+              }`}>
               <span className="text-sm font-extrabold leading-none">{confidence}</span>
               <span className="text-[8px] leading-none">%</span>
             </div>
             <div>
-              <p className={`text-xs font-bold ${
-                confidence >= 80 
-                  ? 'text-emerald-700 dark:text-emerald-400' 
-                  : confidence > 0 
-                  ? 'text-amber-700 dark:text-amber-400' 
-                  : 'text-gray-500'
-              }`}>
-                {confidence >= 90 
-                  ? t('badge_high_conf', 'High confidence') 
-                  : confidence >= 70 
-                  ? t('badge_review_suggested', 'Review suggested') 
-                  : t('badge_low_conf', 'Low confidence warning')}
+              <p className={`text-xs font-bold ${confidence >= 80
+                  ? 'text-emerald-700 dark:text-emerald-400'
+                  : confidence > 0
+                    ? 'text-amber-700 dark:text-amber-400'
+                    : 'text-gray-500'
+                }`}>
+                {confidence >= 90
+                  ? t('badge_high_conf', 'High confidence')
+                  : confidence >= 70
+                    ? t('badge_review_suggested', 'Review suggested')
+                    : t('badge_low_conf', 'Low confidence warning')}
               </p>
               <p className="text-[10px] text-[#7A7185] dark:text-[#9D93A7]">
                 {t('badge_recog_score', 'Recognition score')}
@@ -216,12 +215,12 @@ const RecognitionResults = () => {
           <div className="p-6 sm:p-8 bg-[#FAF8F5] dark:bg-[#15101C] flex items-center justify-center min-h-[480px]">
             {previewUrl ? (
               <div className="w-full flex items-center justify-center">
-                <img 
-                  src={previewUrl} 
-                  alt="Original Document" 
+                <img
+                  src={previewUrl}
+                  alt="Original Document"
                   onError={(e) => {
                     if (fileName && (fileName.includes('tamil_archival') || fileName.includes('archival'))) {
-                      e.currentTarget.src = '/tamil_archival_document.jpg';
+                      e.currentTarget.src = SAMPLE_ARCHIVAL_IMAGE_BASE64;
                     } else if (fileName && fileName.includes('land_record')) {
                       e.currentTarget.src = '/land_record_1978.jpg';
                     } else if (fileName && fileName.includes('birth_cert')) {
@@ -233,10 +232,10 @@ const RecognitionResults = () => {
                     } else if (fileName && fileName.includes('temple')) {
                       e.currentTarget.src = '/temple_grant_1959.jpg';
                     } else {
-                      e.currentTarget.src = '/tamil_archival_document.jpg';
+                      e.currentTarget.src = SAMPLE_ARCHIVAL_IMAGE_BASE64;
                     }
                   }}
-                  className="max-h-[460px] max-w-full object-contain rounded-xl shadow-lg border border-[#DFD7C7] dark:border-[#382C46]" 
+                  className="max-h-[460px] max-w-full object-contain rounded-xl shadow-lg border border-[#DFD7C7] dark:border-[#382C46]"
                 />
               </div>
             ) : (
@@ -279,9 +278,8 @@ const RecognitionResults = () => {
               <button
                 onClick={handleCopy}
                 disabled={!tamilText}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#DFD7C7] dark:border-[#382C46] text-xs font-medium transition-colors cursor-pointer ${
-                  !tamilText ? 'opacity-40 cursor-not-allowed text-gray-400' : 'text-[#4A4154] dark:text-[#D8CEE2] hover:bg-black/5 dark:hover:bg-white/5'
-                }`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#DFD7C7] dark:border-[#382C46] text-xs font-medium transition-colors cursor-pointer ${!tamilText ? 'opacity-40 cursor-not-allowed text-gray-400' : 'text-[#4A4154] dark:text-[#D8CEE2] hover:bg-black/5 dark:hover:bg-white/5'
+                  }`}
               >
                 {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
                 <span>{copied ? t('btn_copied', 'Copied') : t('btn_copy_text', 'Copy')}</span>
@@ -292,15 +290,14 @@ const RecognitionResults = () => {
           {/* Subheader Confidence Legend */}
           <div className="px-6 py-2.5 bg-[#FAF8F5] dark:bg-[#16101E] border-b border-[#DFD7C7] dark:border-[#2C2237] flex items-center gap-4 text-[11px]">
             <div className="flex items-center gap-1.5">
-              <span className={`w-2 h-2 rounded-full ${
-                confidence >= 90 ? 'bg-emerald-500' : confidence >= 70 ? 'bg-amber-500' : 'bg-red-500'
-              }`} />
+              <span className={`w-2 h-2 rounded-full ${confidence >= 90 ? 'bg-emerald-500' : confidence >= 70 ? 'bg-amber-500' : 'bg-red-500'
+                }`} />
               <span className="text-[#7A7185] dark:text-[#9D93A7]">
-                {confidence >= 90 
-                  ? t('legend_high_conf', 'High confidence (>90%)') 
-                  : confidence >= 70 
-                  ? t('badge_review_suggested', 'Review suggested (70-90%)') 
-                  : t('badge_low_conf', 'Low confidence (<70%)')}
+                {confidence >= 90
+                  ? t('legend_high_conf', 'High confidence (>90%)')
+                  : confidence >= 70
+                    ? t('badge_review_suggested', 'Review suggested (70-90%)')
+                    : t('badge_low_conf', 'Low confidence (<70%)')}
               </span>
             </div>
             {saved && (
@@ -356,9 +353,8 @@ const RecognitionResults = () => {
                 element.click();
               }}
               disabled={!tamilText}
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-white font-semibold text-xs transition-colors shadow-xs ${
-                !tamilText ? 'bg-gray-400 cursor-not-allowed opacity-50' : 'bg-[#00737D] hover:bg-[#005F67] cursor-pointer'
-              }`}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-white font-semibold text-xs transition-colors shadow-xs ${!tamilText ? 'bg-gray-400 cursor-not-allowed opacity-50' : 'bg-[#00737D] hover:bg-[#005F67] cursor-pointer'
+                }`}
             >
               <Download className="w-3.5 h-3.5" />
               <span>{t('btn_export_record', 'Export Record')}</span>

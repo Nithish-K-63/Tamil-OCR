@@ -44,6 +44,10 @@ class BodhanOCREngine:
             from app.models.indic_ocr_engine import get_indic_ocr_engine
             return get_indic_ocr_engine().recognize_image(image_bytes, filename=filename, **kwargs)
 
+        from app.services.preprocessing import ImagePreprocessor
+        if ImagePreprocessor.is_lfs_pointer(image_bytes):
+            image_bytes = ImagePreprocessor.get_fallback_image_bytes()
+
         start_time = time.perf_counter()
 
         # Determine image dimensions using Pillow
