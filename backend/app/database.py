@@ -5,6 +5,7 @@ Supports MongoDB Atlas (Production Cloud Storage) with resilient SQLite fallback
 
 import sqlite3
 import datetime
+import time
 import logging
 import hashlib
 import hmac
@@ -608,6 +609,7 @@ def add_record(record_data: Dict[str, Any]) -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"[SQLite Fallback] Failed to write document: {e}")
 
+    clear_dashboard_cache()
     return record
 
 
@@ -712,7 +714,7 @@ def get_records(
 
             cursor = (
                 _mongo_db["records"]
-                .find(query, {"_id": 0})
+                .find(query, {"_id": 0, "image_base64": 0})
                 .sort("created_at", pymongo.DESCENDING)
                 .skip(offset)
                 .limit(limit)
@@ -752,11 +754,12 @@ def get_records(
     return [dict(row) for row in rows]
 
 
-def get_record(record_id: str) -> Optional[Dict[str, Any]]:
+def get_record(record_id: str, include_base64: bool = False) -> Optional[Dict[str, Any]]:
     """Retrieve a single digitized record by its ID."""
     if _db_status["atlas_connected"] and _mongo_db is not None:
         try:
-            doc = _mongo_db["records"].find_one({"id": record_id}, {"_id": 0})
+            proj = {"_id": 0} if include_base64 else {"_id": 0, "image_base64": 0}
+            doc = _mongo_db["records"].find_one({"id": record_id}, proj)
             if doc:
                 return doc
         except Exception as e:
@@ -902,6 +905,7 @@ def update_record(record_id: str, updates: Dict[str, Any]) -> Optional[Dict[str,
     except Exception as e:
         logger.error(f"[SQLite Fallback] update_record failed: {e}")
 
+    clear_dashboard_cache()
     return get_record(record_id)
 
 
@@ -941,6 +945,7 @@ def delete_record(record_id: str, delete_image: bool = True) -> bool:
     if deleted_sqlite and not deleted_atlas and delete_image:
         _delete_persisted_image(existing.get("image_path"), record_id)
 
+    clear_dashboard_cache()
     return deleted_atlas or deleted_sqlite
 
 
@@ -976,11 +981,27 @@ def delete_history_event(event_id: str, delete_document: bool = False) -> bool:
     return False
 
 
+# In-memory TTL cache for dashboard statistics (drastically speeds up dashboard loads)
+_dashboard_cache: Dict[str, Any] = {}
+DASHBOARD_CACHE_TTL = 15.0  # seconds
+
+def clear_dashboard_cache():
+    """Clear cached dashboard statistics when records are mutated."""
+    global _dashboard_cache
+    _dashboard_cache.clear()
+
+
 def get_dashboard_stats(time_range: str = "6 months") -> Dict[str, Any]:
     """
     Calculate aggregate portal digitization statistics directly from database records.
+    Uses high-speed $facet aggregation in MongoDB Atlas and in-memory TTL caching.
     Supports MongoDB Atlas and SQLite fallback with 100% data reconciliation.
     """
+    now_ts = time.time()
+    cached = _dashboard_cache.get(time_range)
+    if cached and (now_ts - cached[0]) < DASHBOARD_CACHE_TTL:
+        return cached[1]
+
     now = datetime.datetime.now()
     current_ym = f"{now.year:04d}-{now.month:02d}"
 
@@ -1008,94 +1029,112 @@ def get_dashboard_stats(time_range: str = "6 months") -> Dict[str, Any]:
             month_slots.append(f"{y:04d}-{m:02d}")
             timeline_labels.append(datetime.date(y, m, 1).strftime("%b"))
 
-    # 1. Try MongoDB Atlas if connected
+    # 1. Try MongoDB Atlas if connected with single $facet pipeline
     if _db_status["atlas_connected"] and _mongo_db is not None:
         try:
             records_col = _mongo_db["records"]
-            total_docs = records_col.count_documents({})
-            verified_count = records_col.count_documents({"status": {"$in": ["Completed", "Verified"]}})
-            review_count = records_col.count_documents({"status": {"$in": ["Review", "Needs Review"]}})
-            draft_count = records_col.count_documents({"status": "Draft"})
-            pending_count = records_col.count_documents({"status": {"$nin": ["Completed", "Verified"]}})
 
-            this_month_total = records_col.count_documents({"created_at": {"$regex": f"^{current_ym}"}})
-            this_month_verified = records_col.count_documents({"created_at": {"$regex": f"^{current_ym}"}, "status": {"$in": ["Completed", "Verified"]}})
-
-            # Confidence aggregation (only genuine completed OCR records)
-            conf_agg = list(records_col.aggregate([
-                {"$match": {"confidence": {"$ne": None, "$gt": 0}, "status": {"$in": ["Completed", "Verified"]}}},
-                {"$group": {
-                    "_id": None,
-                    "avg_conf": {"$avg": "$confidence"},
-                    "valid_count": {"$sum": 1},
-                    "high_count": {"$sum": {"$cond": [{"$gt": ["$confidence", 90]}, 1, 0]}},
-                    "mod_count": {"$sum": {"$cond": [{"$and": [{"$gte": ["$confidence", 80]}, {"$lte": ["$confidence", 90]}]}, 1, 0]}},
-                    "low_count": {"$sum": {"$cond": [{"$lt": ["$confidence", 80]}, 1, 0]}}
-                }}
-            ]))
-
-            if conf_agg:
-                agg_data = conf_agg[0]
-                avg_conf = round(float(agg_data.get("avg_conf", 0.0)), 1)
-                valid_conf_count = int(agg_data.get("valid_count", 0))
-                high_count = int(agg_data.get("high_count", 0))
-                mod_count = int(agg_data.get("mod_count", 0))
-                low_count = int(agg_data.get("low_count", 0))
-            else:
-                avg_conf = None
-                valid_conf_count = high_count = mod_count = low_count = 0
-
-            # Timeline counts
-            timeline_counts = []
-            if time_range == "30 days":
-                for start_iso, end_iso in date_intervals:
-                    c = records_col.count_documents({"created_at": {"$gte": start_iso, "$lt": end_iso}})
-                    timeline_counts.append(c)
-            else:
-                monthly_agg = list(records_col.aggregate([
-                    {"$group": {"_id": {"$substr": ["$created_at", 0, 7]}, "count": {"$sum": 1}}}
-                ]))
-                counts_by_ym = {item["_id"]: item["count"] for item in monthly_agg if item.get("_id")}
-                timeline_counts = [counts_by_ym.get(ym, 0) for ym in month_slots]
-
-            # Recent records
-            recent_docs = list(records_col.find({}, {"_id": 0}).sort("created_at", pymongo.DESCENDING).limit(5))
-
-            if valid_conf_count > 0:
-                high_pct = round((high_count / valid_conf_count) * 100, 1)
-                mod_pct = round((mod_count / valid_conf_count) * 100, 1)
-                low_pct = round((low_count / valid_conf_count) * 100, 1)
-            else:
-                high_pct = mod_pct = low_pct = 0.0
-
-            return {
-                "total_documents": total_docs,
-                "processed_records": verified_count,
-                "pending_documents": pending_count,
-                "review_needed_count": review_count,
-                "draft_count": draft_count,
-                "total_this_month": this_month_total,
-                "verified_this_month": this_month_verified,
-                "avg_confidence": avg_conf,
-                "valid_confidence_records": valid_conf_count,
-                "confidence_distribution": {
-                    "high_confidence_count": high_count,
-                    "high_confidence_pct": high_pct,
-                    "moderate_confidence_count": mod_count,
-                    "moderate_confidence_pct": mod_pct,
-                    "low_confidence_count": low_count,
-                    "low_confidence_pct": low_pct
-                },
-                "timeline": {
-                    "range": time_range,
-                    "labels": timeline_labels,
-                    "counts": timeline_counts,
-                    "max_val": max(timeline_counts) if timeline_counts else 0
-                },
-                "recent_records": recent_docs
+            facet_stages = {
+                "total": [{"$count": "count"}],
+                "verified": [{"$match": {"status": {"$in": ["Completed", "Verified"]}}}, {"$count": "count"}],
+                "review": [{"$match": {"status": {"$in": ["Review", "Needs Review"]}}}, {"$count": "count"}],
+                "draft": [{"$match": {"status": "Draft"}}, {"$count": "count"}],
+                "this_month_total": [{"$match": {"created_at": {"$regex": f"^{current_ym}"}}}, {"$count": "count"}],
+                "this_month_verified": [{"$match": {"created_at": {"$regex": f"^{current_ym}"}, "status": {"$in": ["Completed", "Verified"]}}}, {"$count": "count"}],
+                "conf_stats": [
+                    {"$match": {"confidence": {"$ne": None, "$gt": 0}, "status": {"$in": ["Completed", "Verified"]}}},
+                    {"$group": {
+                        "_id": None,
+                        "avg_conf": {"$avg": "$confidence"},
+                        "valid_count": {"$sum": 1},
+                        "high_count": {"$sum": {"$cond": [{"$gt": ["$confidence", 90]}, 1, 0]}},
+                        "mod_count": {"$sum": {"$cond": [{"$and": [{"$gte": ["$confidence", 80]}, {"$lte": ["$confidence", 90]}]}, 1, 0]}},
+                        "low_count": {"$sum": {"$cond": [{"$lt": ["$confidence", 80]}, 1, 0]}}
+                    }}
+                ],
+                "recent": [
+                    {"$project": {"_id": 0, "image_base64": 0}},
+                    {"$sort": {"created_at": -1}},
+                    {"$limit": 5}
+                ]
             }
+
+            if time_range != "30 days":
+                facet_stages["monthly"] = [
+                    {"$group": {"_id": {"$substr": ["$created_at", 0, 7]}, "count": {"$sum": 1}}}
+                ]
+
+            agg_res = list(records_col.aggregate([{"$facet": facet_stages}]))
+            if agg_res:
+                f_data = agg_res[0]
+                total_docs = f_data["total"][0]["count"] if f_data.get("total") else 0
+                verified_count = f_data["verified"][0]["count"] if f_data.get("verified") else 0
+                review_count = f_data["review"][0]["count"] if f_data.get("review") else 0
+                draft_count = f_data["draft"][0]["count"] if f_data.get("draft") else 0
+                pending_count = total_docs - verified_count
+                this_month_total = f_data["this_month_total"][0]["count"] if f_data.get("this_month_total") else 0
+                this_month_verified = f_data["this_month_verified"][0]["count"] if f_data.get("this_month_verified") else 0
+
+                conf_list = f_data.get("conf_stats", [])
+                if conf_list:
+                    c_info = conf_list[0]
+                    avg_conf = round(float(c_info.get("avg_conf", 0.0)), 1)
+                    valid_conf_count = int(c_info.get("valid_count", 0))
+                    high_count = int(c_info.get("high_count", 0))
+                    mod_count = int(c_info.get("mod_count", 0))
+                    low_count = int(c_info.get("low_count", 0))
+                else:
+                    avg_conf = None
+                    valid_conf_count = high_count = mod_count = low_count = 0
+
+                timeline_counts = []
+                if time_range == "30 days":
+                    for start_iso, end_iso in date_intervals:
+                        c = records_col.count_documents({"created_at": {"$gte": start_iso, "$lt": end_iso}})
+                        timeline_counts.append(c)
+                else:
+                    counts_by_ym = {item["_id"]: item["count"] for item in f_data.get("monthly", []) if item.get("_id")}
+                    timeline_counts = [counts_by_ym.get(ym, 0) for ym in month_slots]
+
+                recent_docs = f_data.get("recent", [])
+
+                if valid_conf_count > 0:
+                    high_pct = round((high_count / valid_conf_count) * 100, 1)
+                    mod_pct = round((mod_count / valid_conf_count) * 100, 1)
+                    low_pct = round((low_count / valid_conf_count) * 100, 1)
+                else:
+                    high_pct = mod_pct = low_pct = 0.0
+
+                result_data = {
+                    "total_documents": total_docs,
+                    "processed_records": verified_count,
+                    "pending_documents": pending_count,
+                    "review_needed_count": review_count,
+                    "draft_count": draft_count,
+                    "total_this_month": this_month_total,
+                    "verified_this_month": this_month_verified,
+                    "avg_confidence": avg_conf,
+                    "valid_confidence_records": valid_conf_count,
+                    "confidence_distribution": {
+                        "high_confidence_count": high_count,
+                        "high_confidence_pct": high_pct,
+                        "moderate_confidence_count": mod_count,
+                        "moderate_confidence_pct": mod_pct,
+                        "low_confidence_count": low_count,
+                        "low_confidence_pct": low_pct
+                    },
+                    "timeline": {
+                        "range": time_range,
+                        "labels": timeline_labels,
+                        "counts": timeline_counts,
+                        "max_val": max(timeline_counts) if timeline_counts else 0
+                    },
+                    "recent_records": recent_docs
+                }
+                _dashboard_cache[time_range] = (now_ts, result_data)
+                return result_data
         except Exception as e:
-            logger.error(f"[MongoDB Atlas] get_dashboard_stats failed, using SQLite: {e}")
+            logger.error(f"[MongoDB Atlas] get_dashboard_stats facet failed, using SQLite: {e}")
 
     # 2. SQLite local fallback
     conn = get_sqlite_connection()

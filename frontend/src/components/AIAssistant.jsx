@@ -456,11 +456,14 @@ export default function AIAssistant() {
     setIsLoading(true);
 
     try {
-      // Map history for API
-      const historyPayload = updatedHistory.slice(-8).map(m => ({
-        role: m.role,
-        content: m.content
-      }));
+      // Map history for API safely, ensuring valid strings
+      const historyPayload = updatedHistory
+        .slice(-8)
+        .filter(m => m && typeof m.content === 'string' && m.content.trim())
+        .map(m => ({
+          role: m.role === 'assistant' ? 'assistant' : 'user',
+          content: m.content.trim()
+        }));
 
       const res = await sendChatMessage(cleanText, historyPayload, language.toLowerCase());
 

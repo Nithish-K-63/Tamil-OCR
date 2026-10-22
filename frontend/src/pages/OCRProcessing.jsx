@@ -212,7 +212,7 @@ const OCRProcessing = () => {
 
   useEffect(() => {
     if (ocrResult && !loading && !error) {
-      setCountdown(3);
+      setCountdown(1);
       countdownTimerRef.current = setInterval(() => {
         setCountdown((prev) => {
           if (prev <= 1) {
@@ -223,7 +223,7 @@ const OCRProcessing = () => {
           }
           return prev - 1;
         });
-      }, 1000);
+      }, 700);
     }
 
     return () => {

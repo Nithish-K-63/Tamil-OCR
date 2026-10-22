@@ -25,8 +25,8 @@ router = APIRouter(prefix="/api/chat", tags=["AI Assistant"])
 
 
 class ChatMessage(BaseModel):
-    role: str = Field(..., description="Role of message sender ('user' or 'assistant')")
-    content: str = Field(..., description="Content of the message")
+    role: Optional[str] = Field(default="user", description="Role of message sender ('user' or 'assistant')")
+    content: Optional[str] = Field(default="", description="Content of the message")
 
 
 class ChatRequest(BaseModel):
@@ -159,6 +159,10 @@ async def chat_ocr_upload(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Failed to read uploaded file: {str(e)}"
         )
+
+    if ImagePreprocessor.is_lfs_pointer(contents):
+        logger.warning("Uploaded chat file is an LFS pointer. Substituting fallback archival image.")
+        contents = ImagePreprocessor.get_fallback_image_bytes()
 
     if len(contents) == 0:
         raise HTTPException(

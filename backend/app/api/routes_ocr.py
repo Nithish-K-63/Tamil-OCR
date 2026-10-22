@@ -156,7 +156,7 @@ async def trigger_ocr_on_saved_document(
     Updates existing document record in MongoDB Atlas to 'Completed' and synchronizes history.
     """
     import base64
-    rec = get_record(record_id)
+    rec = get_record(record_id, include_base64=True)
     if not rec:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, 
